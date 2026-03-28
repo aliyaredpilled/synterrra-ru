@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Chasm & The Bridge — Scrollytelling</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #1e1e1e;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* ========================================
+       CONTAINER
+    ======================================== */
+    .container {
+      position: relative;
+      min-height: 500vh;
+      background: #1e1e1e;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, rgba(120,180,220,0.3), rgba(120,180,220,1), rgba(150,200,230,0.8));
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* ========================================
+       3D SCENE
+    ======================================== */
+    .scene-wrapper {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      overflow: hidden;
+      background: #1e1e1e;
+    }
+
+    /* ========================================
+       TOP TEXT — PROBLEM STATEMENT
+    ======================================== */
+    .problem-text {
+      position: absolute;
+      top: 8%;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      max-width: 700px;
+      padding: 0 20px;
+      z-index: 20;
+    }
+
+    .problem-main {
+      font-size: 22px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.95);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .problem-mission {
+      font-size: 18px;
+      font-weight: 400;
+      color: rgba(120,180,220,0.9);
+      line-height: 1.5;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .problem-mission.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ========================================
+       SCENE 3D
+    ======================================== */
+    .scene {
+      width: 100%;
+      height: 60%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 1200px;
+      perspective-origin: 50% 40%;
+    }
+
+    .scene-inner {
+      position: relative;
+      width: 900px;
+      height: 500px;
+      transform-style: preserve-3d;
+      transform: rotateX(25deg) rotateY(-5deg);
+    }
+
+    /* ========================================
+       LEFT CLIFF — LLM CLOUD
+    ======================================== */
+    .left-cliff {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%) translateZ(50px);
+      width: 180px;
+      height: 300px;
+      transform-style: preserve-3d;
+    }
+
+    .cliff-base {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%) rotateX(90deg);
+      width: 140px;
+      height: 80px;
+      background: 
+        linear-gradient(90deg, rgba(120,180,220,0.15) 1px, transparent 1px),
+        linear-gradient(rgba(120,180,220,0.15) 1px, transparent 1px);
+      background-size: 20px 20px;
+      border: 1px solid rgba(120,180,220,0.4);
+    }
+
+    .cliff-label {
+      position: absolute;
+      bottom: -35px;
+      left: 50%;
+      transform: translateX(-50%) rotateX(-90deg);
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      letter-spacing: 4px;
+      color: rgba(120,180,220,0.7);
+      text-transform: uppercase;
+      white-space: nowrap;
+      font-weight: bold;
+    }
+
+    .cliff-titles {
+      position: absolute;
+      top: 42%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 25;
+      pointer-events: none;
+    }
+
+    .cliff-title {
+      font-size: 22px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.95);
+      line-height: 1.5;
+      text-align: center;
+      width: 180px;
+    }
+
+    .cliff-title-left {
+      transform: translateY(25px);
+    }
+
+    /* ========================================
+       PARTICLE CLOUD — ИЗНАЧАЛЬНО СКРЫТЫ
+    ======================================== */
+    .particle-cloud {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transform-style: preserve-3d;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      transition: opacity 0.5s ease-out;
+    }
+
+    .particle-cloud.visible {
+      opacity: 1;
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(150,200,230,0.9), rgba(100,160,200,0.4));
+      box-shadow: 0 0 10px rgba(120,180,220,0.6), inset 0 0 5px rgba(255,255,255,0.3);
+      animation: particleFloat 3s ease-in-out infinite;
+      will-change: transform, opacity;
+      transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+    }
+
+    @keyframes particleFloat {
+      0%, 100% { transform: translate3d(var(--x), var(--y), var(--z)) scale(1); }
+      50% { transform: translate3d(var(--x), calc(var(--y) - 12px), var(--z)) scale(1.15); }
+    }
+
+    .particle.falling {
+      animation: particleFall 1.5s ease-in forwards;
+    }
+
+    @keyframes particleFall {
+      to {
+        transform: translate3d(calc(var(--x) + 100px), calc(var(--y) + 200px), calc(var(--z) - 150px));
+        opacity: 0;
+      }
+    }
+
+    /* ========================================
+       RIGHT CLIFF — BUSINESS
+    ======================================== */
+    .right-cliff {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%) translateZ(50px);
+      width: 180px;
+      height: 300px;
+      transform-style: preserve-3d;
+    }
+
+    .right-cliff .cliff-label {
+      color: rgba(150,200,230,0.7);
+    }
+
+    /* ========================================
+       THE VOID — ABYSS
+    ======================================== */
+    .void {
+      position: absolute;
+      left: 180px;
+      right: 180px;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 300px;
+      transform-style: preserve-3d;
+      overflow: hidden;
+    }
+
+    .void-gradient {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 150px;
+      background: radial-gradient(ellipse 100% 100% at 50% 100%, rgba(0,0,0,0.8) 0%, transparent 80%);
+    }
+
+    /* ========================================
+       THE BRIDGE — 3 BLOCKS
+    ======================================== */
+    .bridge {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 540px;
+      height: 120px;
+      transform-style: preserve-3d;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .bridge-block {
+      width: 32%;
+      height: 100%;
+      transform-style: preserve-3d;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out, visibility 0.8s;
+    }
+
+    .bridge-block.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .block-platform {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%) rotateX(90deg);
+      height: 60px;
+      background: 
+        linear-gradient(90deg, rgba(120,180,220,0.15) 1px, transparent 1px),
+        linear-gradient(rgba(120,180,220,0.15) 1px, transparent 1px);
+      background-size: 20px 10px;
+      border: 1px solid rgba(120,180,220,0.5);
+      box-shadow: 0 0 25px rgba(120,180,220,0.25);
+    }
+
+    .block-frame {
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(150,200,230,0.4);
+      border-radius: 8px 8px 0 0;
+    }
+
+    .block-frame::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 1px;
+      height: 100%;
+      background: linear-gradient(to bottom, rgba(150,200,230,0.5), rgba(150,200,230,0.1));
+    }
+
+    .block-core {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      top: 50%;
+      height: 4px;
+      transform: translateY(-50%);
+      background: linear-gradient(90deg, rgba(120,180,220,0.3), rgba(120,180,220,0.9), rgba(120,180,220,0.3));
+      border-radius: 2px;
+      box-shadow: 0 0 15px rgba(120,180,220,0.7), 0 0 30px rgba(120,180,220,0.4);
+    }
+
+    .block-number {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      color: rgba(120,180,220,0.8);
+    }
+
+    /* Data Flow */
+    .data-flow {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 20px;
+      transform: translateY(-50%);
+      overflow: hidden;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.6s ease-out, visibility 0.6s;
+    }
+
+    .data-flow.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .data-packet {
+      position: absolute;
+      left: -30px;
+      top: 50%;
+      width: 30px;
+      height: 8px;
+      background: linear-gradient(90deg, transparent, rgba(120,180,220,1), transparent);
+      border-radius: 4px;
+      transform: translateY(-50%);
+      animation: dataFlow 2s linear infinite;
+      box-shadow: 0 0 20px rgba(120,180,220,0.9), 0 0 40px rgba(120,180,220,0.5);
+    }
+
+    @keyframes dataFlow {
+      0% { left: -30px; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { left: calc(100% + 30px); opacity: 0; }
+    }
+
+    /* ========================================
+       BLOCK TEXT LABELS
+    ======================================== */
+    .block-texts {
+      position: absolute;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      width: 100%;
+      max-width: 1100px;
+      padding: 0 20px;
+      z-index: 20;
+    }
+
+    .block-text {
+      flex: 1;
+      max-width: 320px;
+      padding: 20px;
+      background: rgba(30,30,30,0.9);
+      border: 1px solid rgba(120,180,220,0.2);
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out, visibility 0.6s;
+    }
+
+    .block-text.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .block-text-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: rgba(120,180,220,0.95);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .block-text-desc {
+      font-size: 13px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.6;
+    }
+
+    /* ========================================
+       RESPONSIVE
+    ======================================== */
+    @media (max-width: 1024px) {
+      .scene-inner {
+        width: 700px;
+        height: 400px;
+        transform: rotateX(20deg) rotateY(-3deg);
+      }
+      .bridge { width: 340px; }
+      .left-cliff, .right-cliff { width: 140px; }
+      .void { left: 140px; right: 140px; }
+      .problem-main { font-size: 20px; }
+      .block-texts { gap: 15px; }
+      .block-text { padding: 15px; }
+    }
+
+    @media (max-width: 768px) {
+      .scene-inner {
+        width: 95%;
+        max-width: 450px;
+        height: 280px;
+        transform: rotateX(15deg) rotateY(0deg);
+      }
+      .bridge { width: 180px; height: 80px; }
+      .left-cliff, .right-cliff { width: 100px; }
+      .void { left: 100px; right: 100px; }
+      .cliff-label { font-size: 10px; }
+      .problem-text { top: 5%; }
+      .problem-main { font-size: 16px; }
+      .problem-mission { font-size: 14px; }
+      .block-texts {
+        flex-direction: column;
+        align-items: center;
+        bottom: 5%;
+        gap: 10px;
+      }
+      .block-text {
+        max-width: 90%;
+        padding: 12px;
+      }
+      .block-text-title { font-size: 13px; }
+      .block-text-desc { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- 3D SCENE -->
+  <div class="scene-wrapper">
+
+    <!-- TOP TEXT: Problem Statement -->
+    <div class="problem-text">
+      <p class="problem-main">Между абстрактным потенциалом LLM и уникальным контекстом вашей организации лежит пропасть</p>
+      <p class="problem-mission" id="missionText">Наша миссия – стать мостом через нее</p>
+    </div>
+
+    <!-- Cliff Titles (outside 3D scene) -->
+    <div class="cliff-titles">
+      <div class="cliff-title cliff-title-left">Универсальный LLM</div>
+      <div class="cliff-title">Ваша организация</div>
+    </div>
+
+    <div class="scene">
+      <div class="scene-inner">
+
+        <!-- Left Cliff: LLM Cloud -->
+        <div class="left-cliff">
+          <div class="cliff-base">
+            <div class="cliff-label">LLM</div>
+          </div>
+          <div class="particle-cloud" id="particleCloud"></div>
+        </div>
+
+        <!-- The Void -->
+        <div class="void">
+          <div class="void-gradient"></div>
+        </div>
+
+        <!-- The Bridge: 3 Blocks -->
+        <div class="bridge">
+          <div class="bridge-block" id="block1">
+            <div class="block-platform"></div>
+            <div class="block-frame"></div>
+            <div class="block-core"></div>
+            <div class="block-number">1</div>
+          </div>
+          <div class="bridge-block" id="block2">
+            <div class="block-platform"></div>
+            <div class="block-frame"></div>
+            <div class="block-core"></div>
+            <div class="block-number">2</div>
+          </div>
+          <div class="bridge-block" id="block3">
+            <div class="block-platform"></div>
+            <div class="block-frame"></div>
+            <div class="block-core"></div>
+            <div class="block-number">3</div>
+          </div>
+
+          <div class="data-flow" id="dataFlow">
+            <div class="data-packet" style="animation-delay: 0s;"></div>
+            <div class="data-packet" style="animation-delay: 0.4s;"></div>
+            <div class="data-packet" style="animation-delay: 0.8s;"></div>
+            <div class="data-packet" style="animation-delay: 1.2s;"></div>
+            <div class="data-packet" style="animation-delay: 1.6s;"></div>
+          </div>
+        </div>
+
+        <!-- Right Cliff: Business (только одна платформа, как слева) -->
+        <div class="right-cliff">
+          <div class="cliff-base">
+            <div class="cliff-label">BUSINESS</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- BLOCK TEXTS -->
+    <div class="block-texts">
+      <div class="block-text" id="blockText1">
+        <p class="block-text-title">(1) Проектирование фундамента данных</p>
+        <p class="block-text-desc">Трансформация разрозненных данных в надежный цифровой актив.</p>
+      </div>
+      <div class="block-text" id="blockText2">
+        <p class="block-text-title">(2) Архитектура и полный контроль</p>
+        <p class="block-text-desc">Прозрачные пайплайны и работа в безопасном контуре on-premise.</p>
+      </div>
+      <div class="block-text" id="blockText3">
+        <p class="block-text-title">(3) Инжиниринг знаний</p>
+        <p class="block-text-desc">Оцифровка неявного опыта сотрудников в воспроизводимый алгоритм.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Elements
+  const progressBar = document.getElementById('progressBar');
+  const missionText = document.getElementById('missionText');
+  const particleCloud = document.getElementById('particleCloud');
+  const block1 = document.getElementById('block1');
+  const block2 = document.getElementById('block2');
+  const block3 = document.getElementById('block3');
+  const blockText1 = document.getElementById('blockText1');
+  const blockText2 = document.getElementById('blockText2');
+  const blockText3 = document.getElementById('blockText3');
+  const dataFlow = document.getElementById('dataFlow');
+
+  // Generate particles
+  const particles = [];
+
+  for (let i = 0; i < 25; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    const x = (Math.random() * 120 - 60);
+    const y = (Math.random() * 180 - 90);
+    const z = (Math.random() * 60 - 30);
+    const size = Math.random() * 10 + 5;
+
+    particle.style.cssText = `
+      --x: ${x}px;
+      --y: ${y}px;
+      --z: ${z}px;
+      width: ${size}px;
+      height: ${size}px;
+      animation-delay: ${Math.random() * 2}s;
+      animation-duration: ${2.5 + Math.random() * 2}s;
+    `;
+
+    particleCloud.appendChild(particle);
+    particles.push({ el: particle, falling: false });
+  }
+
+  // Scroll handler
+  function handleScroll() {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = Math.min(Math.max(scrollTop / docHeight, 0), 1);
+
+    // Progress bar
+    progressBar.style.width = (progress * 100) + '%';
+
+    // Частицы появляются только после небольшого скролла (0.05+)
+    if (progress >= 0.05) {
+      particleCloud.classList.add('visible');
+    } else {
+      particleCloud.classList.remove('visible');
+    }
+
+    // Particles falling (0.05 - 0.25)
+    if (progress >= 0.05 && progress < 0.30) {
+      const fallRatio = (progress - 0.05) / 0.20;
+      const particlesToFall = Math.floor(fallRatio * particles.length);
+
+      particles.forEach((p, i) => {
+        if (i < particlesToFall && !p.falling) {
+          p.el.classList.add('falling');
+          p.falling = true;
+        }
+      });
+    }
+
+    // Mission text appears (0.1+)
+    if (progress >= 0.1) {
+      missionText.classList.add('visible');
+    } else {
+      missionText.classList.remove('visible');
+    }
+
+    // Block 1 appears (0.25+) and STAYS
+    if (progress >= 0.25) {
+      block1.classList.add('visible');
+      blockText1.classList.add('visible');
+    } else {
+      block1.classList.remove('visible');
+      blockText1.classList.remove('visible');
+    }
+
+    // Block 2 appears (0.45+) and STAYS
+    if (progress >= 0.45) {
+      block2.classList.add('visible');
+      blockText2.classList.add('visible');
+    } else {
+      block2.classList.remove('visible');
+      blockText2.classList.remove('visible');
+    }
+
+    // Block 3 appears (0.65+) and STAYS
+    if (progress >= 0.65) {
+      block3.classList.add('visible');
+      blockText3.classList.add('visible');
+    } else {
+      block3.classList.remove('visible');
+      blockText3.classList.remove('visible');
+    }
+
+    // Data flow starts when all 3 blocks visible (0.8+)
+    if (progress >= 0.8) {
+      dataFlow.classList.add('visible');
+    } else {
+      dataFlow.classList.remove('visible');
+    }
+  }
+
+  // Init
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  handleScroll();
+</script>
+
+</body>
+</html>

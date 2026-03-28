@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Syntera Media - Multimodal Reactor</title>
+  <style>
+/* Multimodal Reactor - Media Processing Visualization */
+
+:root {
+  --ease-tech: cubic-bezier(0.22, 1, 0.36, 1);
+  --cycle: 12s;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+/* === MAIN CONTAINER === */
+.reactor {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: system-ui, -apple-system, sans-serif;
+  user-select: none;
+  color: #0f172a;
+}
+
+/* === BACKGROUND AMBIENCE === */
+.reactor__bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  display: none;
+}
+
+.reactor__gradient-1 {
+  position: absolute;
+  top: -10%;
+  left: -10%;
+  width: 50%;
+  height: 50%;
+  background: #e0e7ff;
+  filter: blur(100px);
+  border-radius: 50%;
+  mix-blend-mode: multiply;
+  opacity: 0;
+}
+
+.reactor__gradient-2 {
+  position: absolute;
+  bottom: -10%;
+  right: -10%;
+  width: 50%;
+  height: 50%;
+  background: #cffafe;
+  filter: blur(100px);
+  border-radius: 50%;
+  mix-blend-mode: multiply;
+  opacity: 0;
+}
+
+.reactor__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  filter: grayscale(100%);
+}
+
+/* === SCENE CONTAINER === */
+.reactor__scene {
+  position: relative;
+  width: 100%;
+  max-width: 750px;
+  height: 400px;
+  perspective: 1000px;
+  transform: scale(1.3) translateY(30px);
+  transform-origin: center center;
+}
+
+.reactor__track {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  transform-style: preserve-3d;
+}
+
+/* === NODE WRAPPERS === */
+.reactor__node {
+  position: relative;
+  z-index: 10;
+}
+
+.reactor__label {
+  position: absolute;
+  top: -56px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  font-weight: bold;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fade-in-label var(--cycle) ease-in-out infinite;
+}
+
+/* Processing label positioned lower */
+.reactor__split .reactor__label {
+  top: -36px;
+}
+
+/* === NODE 1: INPUT === */
+.reactor__cube {
+  width: 70px;
+  height: 70px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: hover 6s ease-in-out infinite;
+}
+
+.reactor__cube-face {
+  position: absolute;
+  inset: 0;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  backdrop-filter: blur(4px);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.reactor__cube-face--front { transform: translateZ(35px); }
+.reactor__cube-face--back { transform: translateZ(-35px); }
+.reactor__cube-face--right { transform: rotateY(90deg) translateZ(35px); }
+.reactor__cube-face--left { transform: rotateY(-90deg) translateZ(35px); }
+.reactor__cube-face--top { transform: rotateX(90deg) translateZ(35px); }
+.reactor__cube-face--bottom { transform: rotateX(-90deg) translateZ(35px); }
+
+.reactor__chaos {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+.reactor__chaos-symbol {
+  position: absolute;
+  font-family: monospace;
+}
+
+.reactor__chaos-symbol--1 {
+  color: #0891b2;
+  font-size: 18px;
+  animation: float-chaos-1 4s linear infinite;
+}
+
+.reactor__chaos-symbol--2 {
+  color: #7c3aed;
+  font-size: 14px;
+  animation: float-chaos-2 5s linear infinite;
+}
+
+.reactor__chaos-symbol--3 {
+  color: #1e293b;
+  font-size: 12px;
+  animation: float-chaos-3 3s linear infinite;
+}
+
+.reactor__spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: #06b6d4;
+  border-radius: 50%;
+  filter: blur(4px);
+  opacity: 0;
+  animation: emit-spark var(--cycle) linear infinite;
+}
+
+/* === CONNECTIONS === */
+.reactor__path {
+  flex: 1;
+  height: 2px;
+  background: #e2e8f0;
+  position: relative;
+  margin: 0 16px;
+  overflow: hidden;
+}
+
+.reactor__beam {
+  width: 64px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, #06b6d4, transparent);
+  position: absolute;
+  top: 0;
+  left: -64px;
+  animation: travel-path-1 var(--cycle) var(--ease-tech) infinite;
+}
+
+/* === NODE 2: PROCESSING (SPLIT) === */
+.reactor__split {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  height: 260px;
+}
+
+.reactor__layer {
+  width: 64px;
+  height: 40px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.3;
+}
+
+/* Branch A: Text */
+.reactor__layer--text {
+  flex-direction: column;
+  gap: 2px;
+  animation: activate-layer var(--cycle) ease-out infinite;
+  animation-delay: 1.5s;
+}
+
+.reactor__text-line {
+  width: 48px;
+  height: 4px;
+  background: #6366f1;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  animation: stack-plate 0.3s ease-out forwards;
+  opacity: 0;
+}
+
+.reactor__text-line:nth-child(1) { animation-delay: 1.6s; }
+.reactor__text-line:nth-child(2) { animation-delay: 1.8s; }
+.reactor__text-line:nth-child(3) { animation-delay: 2.0s; }
+
+/* Branch B: Audio */
+.reactor__layer--audio {
+  animation: activate-layer var(--cycle) ease-out infinite;
+  animation-delay: 2.5s;
+}
+
+.reactor__audio-ring {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.reactor__audio-ring--outer {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #8b5cf6;
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation-delay: 2.8s;
+}
+
+.reactor__audio-ring--inner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #7c3aed;
+  animation: pulse-fast 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation-delay: 3.0s;
+}
+
+/* Branch C: Image */
+.reactor__layer--image {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  padding: 4px;
+  animation: activate-layer var(--cycle) ease-out infinite;
+  animation-delay: 3.5s;
+}
+
+.reactor__pixel {
+  width: 100%;
+  height: 100%;
+  background: #06b6d4;
+  border-radius: 1px;
+  animation: pixel-flicker 0.8s steps(2) 4;
+}
+
+/* Branch D: Video */
+.reactor__layer--video {
+  animation: activate-layer var(--cycle) ease-out infinite;
+  animation-delay: 4.5s;
+}
+
+.reactor__frame {
+  position: absolute;
+  width: 40px;
+  height: 24px;
+  border: 2px solid #f43f5e;
+  background: #fff1f2;
+  border-radius: 4px;
+  animation: slide-frame 1s ease-in-out infinite alternate;
+}
+
+.reactor__frame--1 {
+  transform: rotate(6deg) translateX(8px);
+  animation-delay: 4.8s;
+}
+
+.reactor__frame--2 {
+  transform: rotate(-3deg) translateX(4px);
+  animation-delay: 5.0s;
+}
+
+.reactor__frame--3 {
+  transform: rotate(0deg);
+  z-index: 10;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: slide-frame-front 1s ease-in-out infinite alternate-reverse;
+  animation-delay: 5.2s;
+}
+
+.reactor__play-icon {
+  width: 0;
+  height: 0;
+  border-left: 6px solid #e11d48;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  margin-left: 4px;
+}
+
+/* Layer labels */
+.reactor__layer-label {
+  position: absolute;
+  left: -28px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: -0.05em;
+  opacity: 0;
+  animation: text-reveal var(--cycle) ease-out infinite;
+}
+
+.reactor__layer-label--text { color: #4f46e5; animation-delay: 1.7s; }
+.reactor__layer-label--audio { color: #7c3aed; animation-delay: 2.7s; }
+.reactor__layer-label--image { color: #0891b2; animation-delay: 3.7s; }
+.reactor__layer-label--video { color: #e11d48; animation-delay: 5.0s; }
+
+/* === CONVERGENCE PATHS === */
+.reactor__convergence {
+  flex: 1;
+  height: 100px;
+  position: relative;
+  margin: 0 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.reactor__converge-path {
+  width: 100%;
+  height: 1px;
+  background: #e2e8f0;
+  position: relative;
+  overflow: hidden;
+  transform-origin: right;
+}
+
+.reactor__converge-path--1 { transform: rotate(12deg); }
+.reactor__converge-path--2 { transform: rotate(6deg); }
+.reactor__converge-path--3 { transform: rotate(-6deg); }
+.reactor__converge-path--4 { transform: rotate(-12deg); }
+
+.reactor__converge-beam {
+  width: 32px;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: -32px;
+}
+
+.reactor__converge-beam--1 {
+  background: linear-gradient(to right, transparent, #6366f1, transparent);
+  animation: travel-path-2 var(--cycle) var(--ease-tech) infinite;
+}
+
+.reactor__converge-beam--2 {
+  background: linear-gradient(to right, transparent, #8b5cf6, transparent);
+  animation: travel-path-2 var(--cycle) var(--ease-tech) infinite;
+  animation-delay: 0.1s;
+}
+
+.reactor__converge-beam--3 {
+  background: linear-gradient(to right, transparent, #06b6d4, transparent);
+  animation: travel-path-2 var(--cycle) var(--ease-tech) infinite;
+  animation-delay: 0.2s;
+}
+
+.reactor__converge-beam--4 {
+  background: linear-gradient(to right, transparent, #f43f5e, transparent);
+  animation: travel-path-2 var(--cycle) var(--ease-tech) infinite;
+  animation-delay: 0.3s;
+}
+
+/* === NODE 3: FUSION === */
+.reactor__turbine {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+}
+
+.reactor__turbine-ring {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.reactor__turbine-ring--outer {
+  inset: 0;
+  border: 2px dashed #cbd5e1;
+  animation: spin-slow-idle 10s linear infinite;
+}
+
+.reactor__turbine-ring--1 {
+  inset: 8px;
+  border: 2px solid transparent;
+  border-top-color: #06b6d4;
+  border-bottom-color: #8b5cf6;
+  opacity: 0;
+  animation: turbine-spin-1 var(--cycle) ease-in infinite;
+}
+
+.reactor__turbine-ring--2 {
+  inset: 24px;
+  border: 4px solid #e2e8f0;
+  border-left-color: #1e293b;
+  opacity: 0;
+  animation: turbine-spin-2 var(--cycle) ease-in infinite;
+}
+
+.reactor__core {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #0f172a;
+  border-radius: 50%;
+  filter: blur(4px);
+  opacity: 0;
+  animation: core-flash var(--cycle) ease-out infinite;
+}
+
+/* === OUTPUT PATH === */
+.reactor__output-beam {
+  width: 96px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, #0f172a, transparent);
+  position: absolute;
+  top: 0;
+  left: -96px;
+  animation: travel-path-3 var(--cycle) ease-out infinite;
+}
+
+/* === NODE 4: OUTPUT === */
+.reactor__crystal-wrapper {
+  width: 70px;
+  height: 70px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  animation: hover 6s ease-in-out 3s infinite;
+}
+
+.reactor__aura {
+  position: absolute;
+  inset: 0;
+  background: rgba(167, 139, 250, 0.3);
+  filter: blur(40px);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.5);
+  animation: final-bloom var(--cycle) ease-out infinite;
+}
+
+.reactor__crystal {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(to bottom right, #e0e7ff, #ddd6fe);
+  border: 1px solid #94a3b8;
+  backdrop-filter: blur(8px);
+  transform: rotate(45deg);
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  opacity: 0.5;
+  animation: crystal-activate var(--cycle) ease-out infinite;
+  position: relative;
+}
+
+.reactor__crystal-shine {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.4);
+  mix-blend-mode: soft-light;
+}
+
+.reactor__crystal-core {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid #1e293b;
+  opacity: 0;
+  animation: crystal-inner var(--cycle) ease-out infinite;
+}
+
+/* === ANIMATIONS === */
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes hover {
+  0%, 100% { transform: translateY(0) rotateX(10deg) rotateY(20deg); }
+  50% { transform: translateY(-10px) rotateX(15deg) rotateY(25deg); }
+}
+
+@keyframes float-chaos-1 {
+  0% { transform: translate3d(0,0,0) rotate(0deg); opacity: 0.5; }
+  25% { transform: translate3d(15px,-10px,20px) rotate(45deg); opacity: 0.8; }
+  50% { transform: translate3d(-10px,15px,-10px) rotate(90deg); opacity: 0.3; }
+  75% { transform: translate3d(10px,10px,10px) rotate(135deg); opacity: 0.7; }
+  100% { transform: translate3d(0,0,0) rotate(180deg); opacity: 0.5; }
+}
+
+@keyframes float-chaos-2 {
+  0% { transform: translate3d(0,0,0) rotate(0deg); opacity: 0.5; }
+  25% { transform: translate3d(-15px,10px,-20px) rotate(-45deg); opacity: 0.8; }
+  50% { transform: translate3d(10px,-15px,10px) rotate(-90deg); opacity: 0.3; }
+  75% { transform: translate3d(-10px,-10px,-10px) rotate(-135deg); opacity: 0.7; }
+  100% { transform: translate3d(0,0,0) rotate(-180deg); opacity: 0.5; }
+}
+
+@keyframes float-chaos-3 {
+  0% { transform: translate3d(0,0,0) rotate(0deg); opacity: 0.5; }
+  33% { transform: translate3d(12px,-8px,15px) rotate(60deg); opacity: 0.8; }
+  66% { transform: translate3d(-8px,12px,-8px) rotate(120deg); opacity: 0.4; }
+  100% { transform: translate3d(0,0,0) rotate(180deg); opacity: 0.5; }
+}
+
+@keyframes emit-spark {
+  0%, 80% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  90% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+}
+
+@keyframes travel-path-1 {
+  0%, 4% { left: -100px; opacity: 0; }
+  5% { opacity: 1; }
+  12% { left: 100%; opacity: 0; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@keyframes activate-layer {
+  0% { opacity: 0.3; filter: grayscale(1); transform: scale(1); }
+  2% { opacity: 1; filter: grayscale(0); transform: scale(1.05); box-shadow: 0 0 20px rgba(99,102,241,0.2); }
+  8% { opacity: 1; }
+  12% { opacity: 0.3; filter: grayscale(1); transform: scale(1); box-shadow: none; }
+  100% { opacity: 0.3; }
+}
+
+@keyframes stack-plate {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ping-slow {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-fast {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes pixel-flicker {
+  0% { opacity: 0.4; background-color: rgba(6,182,212,0.4); }
+  50% { opacity: 1; background-color: rgba(6,182,212,1); }
+  100% { opacity: 0.4; background-color: rgba(6,182,212,0.4); }
+}
+
+@keyframes slide-frame {
+  0% { transform: translateY(2px) scale(0.9); opacity: 0.5; }
+  50% { transform: translateY(0px) scale(1); opacity: 1; }
+  100% { transform: translateY(2px) scale(0.9); opacity: 0.5; }
+}
+
+@keyframes slide-frame-front {
+  0% { transform: translateY(-2px) scale(0.9); opacity: 0.5; }
+  50% { transform: translateY(0px) scale(1); opacity: 1; }
+  100% { transform: translateY(-2px) scale(0.9); opacity: 0.5; }
+}
+
+@keyframes text-reveal {
+  0%, 20% { opacity: 0; transform: translateX(10px) translateY(-50%); }
+  30% { opacity: 1; transform: translateX(0) translateY(-50%); }
+  40% { opacity: 0; transform: translateX(10px) translateY(-50%); }
+  100% { opacity: 0; }
+}
+
+@keyframes travel-path-2 {
+  0%, 46% { left: -50px; opacity: 0; }
+  48% { opacity: 1; }
+  63% { left: 100%; opacity: 0; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@keyframes spin-slow-idle {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes turbine-spin-1 {
+  0%, 63% { transform: rotate(0deg); opacity: 0; }
+  66% { opacity: 1; transform: rotate(0deg); }
+  75% { transform: rotate(360deg) scale(1.1); }
+  83% { opacity: 0; transform: rotate(720deg); }
+  100% { opacity: 0; }
+}
+
+@keyframes turbine-spin-2 {
+  0%, 63% { transform: rotate(0deg); opacity: 0; }
+  66% { opacity: 1; transform: rotate(0deg); }
+  75% { transform: rotate(-360deg) scale(1.1); }
+  83% { opacity: 0; transform: rotate(-720deg); }
+  100% { opacity: 0; }
+}
+
+@keyframes core-flash {
+  0%, 70% { opacity: 0; transform: scale(0.5); }
+  73% { opacity: 1; transform: scale(1.5); box-shadow: 0 0 30px #1e293b; }
+  80% { opacity: 0; transform: scale(0.5); }
+  100% { opacity: 0; }
+}
+
+@keyframes travel-path-3 {
+  0%, 83% { left: -100px; opacity: 0; }
+  85% { opacity: 1; width: 100px; }
+  92% { left: 100%; opacity: 0; width: 20px; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@keyframes crystal-activate {
+  0%, 88% { opacity: 0.5; transform: rotate(45deg) scale(1); filter: grayscale(1); border-color: #94a3b8; }
+  91% { opacity: 1; transform: rotate(45deg) scale(1.1); filter: grayscale(0); border-color: #1e293b; background-color: rgba(139,92,246, 0.1); box-shadow: 0 0 40px rgba(139,92,246, 0.4); }
+  100% { opacity: 0.5; transform: rotate(45deg) scale(1); filter: grayscale(1); box-shadow: none; }
+}
+
+@keyframes crystal-inner {
+  0%, 90% { opacity: 0; transform: scale(0.5); }
+  91% { opacity: 1; transform: scale(1); border-color: #1e293b; }
+  96% { opacity: 0; transform: scale(1.2); }
+  100% { opacity: 0; }
+}
+
+@keyframes final-bloom {
+  0%, 90% { opacity: 0; transform: scale(0.5); }
+  91% { opacity: 1; transform: scale(1.5); }
+  96% { opacity: 0; transform: scale(2); }
+  100% { opacity: 0; }
+}
+
+@keyframes fade-in-label {
+  0%, 10%, 100% { opacity: 0.3; color: #94a3b8; text-shadow: none; }
+  15%, 90% { opacity: 1; color: #0f172a; text-shadow: 0 0 10px rgba(0,0,0,0.1); }
+}
+  </style>
+</head>
+<body>
+  <div class="reactor">
+    <!-- Background Ambience -->
+    <div class="reactor__bg">
+      <div class="reactor__gradient-1"></div>
+      <div class="reactor__gradient-2"></div>
+      <div class="reactor__grid"></div>
+    </div>
+
+    <!-- Main 3D Scene Container -->
+    <div class="reactor__scene">
+      <div class="reactor__track">
+
+        <!-- NODE 1: INPUT -->
+        <div class="reactor__node">
+          <div class="reactor__label">Input</div>
+
+          <!-- Glass Cube -->
+          <div class="reactor__cube">
+            <div class="reactor__cube-face reactor__cube-face--front">RAW</div>
+            <div class="reactor__cube-face reactor__cube-face--back"></div>
+            <div class="reactor__cube-face reactor__cube-face--right"></div>
+            <div class="reactor__cube-face reactor__cube-face--left"></div>
+            <div class="reactor__cube-face reactor__cube-face--top"></div>
+            <div class="reactor__cube-face reactor__cube-face--bottom"></div>
+
+            <!-- Floating Chaos Symbols inside -->
+            <div class="reactor__chaos">
+              <span class="reactor__chaos-symbol reactor__chaos-symbol--1">1</span>
+              <span class="reactor__chaos-symbol reactor__chaos-symbol--2">A</span>
+              <span class="reactor__chaos-symbol reactor__chaos-symbol--3">{}</span>
+            </div>
+          </div>
+
+          <!-- Initial Spark Emitter -->
+          <div class="reactor__spark"></div>
+        </div>
+
+        <!-- PATH 1: Input -> Split -->
+        <div class="reactor__path">
+          <div class="reactor__beam"></div>
+        </div>
+
+        <!-- NODE 2: THE SPLIT (Expanded) -->
+        <div class="reactor__split">
+          <div class="reactor__label" style="animation-delay: 1.5s;">Processing</div>
+
+          <!-- Branch A: Logic (Text) -->
+          <div class="reactor__layer reactor__layer--text">
+            <div class="reactor__text-line"></div>
+            <div class="reactor__text-line"></div>
+            <div class="reactor__text-line"></div>
+            <div class="reactor__layer-label reactor__layer-label--text">TXT</div>
+          </div>
+
+          <!-- Branch B: Audio (Waveform) -->
+          <div class="reactor__layer reactor__layer--audio">
+            <div class="reactor__audio-ring reactor__audio-ring--outer"></div>
+            <div class="reactor__audio-ring reactor__audio-ring--inner"></div>
+            <div class="reactor__layer-label reactor__layer-label--audio">AUD</div>
+          </div>
+
+          <!-- Branch C: Vision (Pixels) -->
+          <div class="reactor__layer reactor__layer--image">
+            <div class="reactor__pixel" style="animation-delay: 4.10s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.15s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.20s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.25s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.30s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.35s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.40s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.45s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.50s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.55s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.60s;"></div>
+            <div class="reactor__pixel" style="animation-delay: 4.65s;"></div>
+            <div class="reactor__layer-label reactor__layer-label--image">IMG</div>
+          </div>
+
+          <!-- Branch D: Video (Frames) -->
+          <div class="reactor__layer reactor__layer--video">
+            <div class="reactor__frame reactor__frame--1"></div>
+            <div class="reactor__frame reactor__frame--2"></div>
+            <div class="reactor__frame reactor__frame--3">
+              <div class="reactor__play-icon"></div>
+            </div>
+            <div class="reactor__layer-label reactor__layer-label--video">VID</div>
+          </div>
+        </div>
+
+        <!-- PATH 2: Split -> Fusion -->
+        <div class="reactor__convergence">
+          <div class="reactor__converge-path reactor__converge-path--1">
+            <div class="reactor__converge-beam reactor__converge-beam--1"></div>
+          </div>
+          <div class="reactor__converge-path reactor__converge-path--2">
+            <div class="reactor__converge-beam reactor__converge-beam--2"></div>
+          </div>
+          <div class="reactor__converge-path reactor__converge-path--3">
+            <div class="reactor__converge-beam reactor__converge-beam--3"></div>
+          </div>
+          <div class="reactor__converge-path reactor__converge-path--4">
+            <div class="reactor__converge-beam reactor__converge-beam--4"></div>
+          </div>
+        </div>
+
+        <!-- NODE 3: THE FUSION -->
+        <div class="reactor__node">
+          <div class="reactor__label" style="animation-delay: 7.5s;">Fusion</div>
+
+          <div class="reactor__turbine">
+            <div class="reactor__turbine-ring reactor__turbine-ring--outer"></div>
+            <div class="reactor__turbine-ring reactor__turbine-ring--1"></div>
+            <div class="reactor__turbine-ring reactor__turbine-ring--2"></div>
+            <div class="reactor__core"></div>
+          </div>
+        </div>
+
+        <!-- PATH 3: Fusion -> Output -->
+        <div class="reactor__path">
+          <div class="reactor__output-beam"></div>
+        </div>
+
+        <!-- NODE 4: OUTPUT -->
+        <div class="reactor__node">
+          <div class="reactor__label" style="animation-delay: 10.0s;">Product</div>
+
+          <div class="reactor__crystal-wrapper">
+            <div class="reactor__aura"></div>
+            <div class="reactor__crystal">
+              <div class="reactor__crystal-shine"></div>
+              <div class="reactor__crystal-core"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</body>
+</html>

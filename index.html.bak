@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>syntera-landing</title>
+  <script type="module" crossorigin src="/assets/index-CYZTui-A.js?v=20260129-3"></script>
+  <style>
+    /* GLOBAL NOISE AND BACKGROUNDS */
+    #global-noise {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.05;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
+    }
+
+    body {
+      background-color: #121212 !important;
+    }
+
+    /* Force sections to be solid dark to cover gradients and fix flicker */
+    .noise-graphite,
+    .chasm,
+    .journey,
+    .projects,
+    .labs,
+    .team {
+      background-color: #121212 !important;
+      background-image: none !important;
+    }
+
+    /* Hide old pseudo-element noise */
+    .noise-graphite::before,
+    .noise-graphite::after {
+      display: none !important;
+    }
+
+    @media (max-width: 640px) {
+      .chasm__scene-wrapper {
+        position: relative;
+        padding-top: 10vh;
+      }
+
+      .chasm__problem-text {
+        top: 10% !important;
+        transform: translate(-50%, 0) !important;
+      }
+
+      .chasm__scene {
+        top: -5% !important;
+      }
+
+      .chasm__cliff-titles {
+        top: 35% !important;
+      }
+
+      .chasm__block-texts {
+        transform: translate(-50%, 100px) !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="global-noise"></div>
+  <div id="root"></div>
+</body>
+
+</html>

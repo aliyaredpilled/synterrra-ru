@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Visualization - Final Logic</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: #ffffff;
+        }
+        #root {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const FinancialVisChat = () => {
+          // 0: Вопрос
+          // 1: Обработка
+          // 2: Сетка
+          // 3: Линия и точки
+          // 4: Ответ ИИ
+          // 5: Очистка
+          const [step, setStep] = useState(0);
+          const [isPaused, setIsPaused] = useState(false);
+
+          // PAUSE/PLAY LISTENER
+          useEffect(() => {
+            const handleMessage = (event) => {
+              if (event.data.type === 'animation') {
+                if (event.data.command === 'pause') {
+                  setIsPaused(true);
+                } else if (event.data.command === 'play') {
+                  setIsPaused(false);
+                }
+              }
+            };
+            window.addEventListener('message', handleMessage);
+            return () => window.removeEventListener('message', handleMessage);
+          }, []);
+
+          useEffect(() => {
+            if (isPaused) return; // Не запускаем если на паузе
+
+            let isMounted = true;
+
+            const runSequence = async () => {
+              while (isMounted) {
+                // ШАГ 0: Вопрос
+                setStep(0);
+                await new Promise(r => setTimeout(r, 3500));
+                if (!isMounted) break;
+
+                // ШАГ 1: Думаем (Кубик)
+                setStep(1);
+                await new Promise(r => setTimeout(r, 3000));
+                if (!isMounted) break;
+
+                // ШАГ 2: Появление сетки (Плавное)
+                setStep(2);
+                await new Promise(r => setTimeout(r, 1000)); // Чуть больше времени на проявление
+                if (!isMounted) break;
+
+                // ШАГ 3: Рисуем линию и точки
+                setStep(3);
+                await new Promise(r => setTimeout(r, 2000));
+                if (!isMounted) break;
+
+                // ШАГ 4: Ответ ИИ
+                setStep(4);
+                await new Promise(r => setTimeout(r, 8000));
+                if (!isMounted) break;
+
+                // ШАГ 5: Очистка (плавное исчезновение графика)
+                setStep(5);
+                await new Promise(r => setTimeout(r, 2000));
+              }
+            };
+
+            runSequence();
+
+            return () => { isMounted = false; };
+          }, [isPaused]);
+
+          return (
+            <div className="vis-container">
+              <style>{`
+                /* --- БАЗА --- */
+                .vis-container {
+                  width: 100%;
+                  height: 700px;
+                  background: #ffffff;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  overflow: hidden;
+                  font-family: 'Inter', sans-serif;
+                  perspective: 1000px;
+                  position: relative;
+                }
+
+                :root {
+                  --c-pos: #00d68f;
+                  --c-neg: #ff3b30;
+                  --glass-bg: rgba(255, 255, 255, 0.75);
+                }
+
+                .scene {
+                  width: 100%;
+                  height: 100%;
+                  position: relative;
+                  transform-style: preserve-3d;
+                  margin-left: -100px; /* сдвигаем всю сцену влево */
+                }
+
+                /* --- 1. CHAT (USER) --- */
+                .chat-bubble-user {
+                  position: absolute;
+                  top: 45%;
+                  left: 50%;
+                  /* ИЗМЕНЕНИЕ: transform adjusted to center nicely with side icon */
+                  transform: translate(-50%, -50%) translateZ(50px);
+                  display: flex;
+                  flex-direction: row; /* ИЗМЕНЕНИЕ: Иконка слева (в ряд) */
+                  align-items: center;
+                  gap: 20px;
+                  opacity: 0;
+                  transition: all 0.6s ease;
+                  pointer-events: none;
+                  z-index: 20;
+                  width: auto;
+                  min-width: 400px; /* Чтобы не скакало */
+                  justify-content: center;
+                }
+                .chat-bubble-user.active {
+                  opacity: 1;
+                  transform: translate(-50%, -50%) translateZ(0px);
+                  transition-delay: 0.3s;
+                }
+                .chat-bubble-user.exit {
+                  opacity: 0;
+                  transform: translate(-50%, -150%) scale(0.9);
+                }
+
+                .bubble-text {
+                  background: var(--glass-bg);
+                  backdrop-filter: blur(12px);
+                  padding: 20px 40px;
+                  border-radius: 40px 40px 40px 4px; /* Хвостик слева внизу */
+                  border: 1px solid rgba(0,0,0,0.05);
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+                  font-size: 1.3rem;
+                  font-weight: 500;
+                  color: #000;
+                  text-align: left;
+                }
+                
+                .user-icon {
+                  width: 48px;
+                  height: 48px;
+                  background: #f0f0f0;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: #666;
+                  font-size: 24px; /* Иконка побольше */
+                  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+                  flex-shrink: 0;
+                }
+
+                /* --- 2. CUBE (THINKING) --- */
+                .loader-wrapper {
+                  position: absolute;
+                  top: 50%;
+                  left: 50%;
+                  transform: translate(-50%, -50%);
+                  margin-left: 100px; /* компенсация сдвига сцены влево */
+                  opacity: 0;
+                  transition: opacity 0.3s ease;
+                  pointer-events: none;
+                  z-index: 10;
+                }
+                .loader-wrapper.active {
+                  opacity: 1;
+                }
+
+                .cube-spinner {
+                  width: 50px;
+                  height: 50px;
+                  position: relative;
+                  transform-style: preserve-3d;
+                  animation: rotateCube 3s infinite linear;
+                }
+                .cube-face {
+                  position: absolute;
+                  width: 50px;
+                  height: 50px;
+                  background: rgba(0, 0, 0, 0.05);
+                  border: 2px solid #000;
+                }
+                .cube-face:nth-child(1) { transform: translateZ(25px); }
+                .cube-face:nth-child(2) { transform: rotateY(180deg) translateZ(25px); }
+                .cube-face:nth-child(3) { transform: rotateY(90deg) translateZ(25px); }
+                .cube-face:nth-child(4) { transform: rotateY(-90deg) translateZ(25px); }
+                .cube-face:nth-child(5) { transform: rotateX(90deg) translateZ(25px); }
+                .cube-face:nth-child(6) { transform: rotateX(-90deg) translateZ(25px); }
+
+                @keyframes rotateCube {
+                  0% { transform: rotateX(0deg) rotateY(0deg); }
+                  100% { transform: rotateX(360deg) rotateY(360deg); }
+                }
+
+                /* --- 3. CHART CONTAINER --- */
+                .chart-container {
+                  position: absolute;
+                  width: 600px;
+                  height: 400px;
+                  top: 42%;
+                  left: 50%;
+                  transform: translate(-50%, -50%) rotateX(10deg);
+                  transform-style: preserve-3d;
+                  opacity: 0;
+                  transition: opacity 1.2s ease-in-out, transform 1.5s ease-in-out;
+                }
+                .chart-container.active {
+                  opacity: 1;
+                }
+                .chart-container.fade-out {
+                  opacity: 0;
+                  transform: translate(-50%, -50%) rotateX(10deg) scale(0.95);
+                  transition: opacity 1.5s ease-in-out, transform 1.5s ease-in-out;
+                }
+
+                /* Оси и Лейблы */
+                .y-axis-labels {
+                  position: absolute;
+                  left: -40px;
+                  top: 0;
+                  height: 100%;
+                  color: #999;
+                  font-size: 0.7rem;
+                  text-align: right;
+                }
+
+                .grid-lines {
+                  position: absolute;
+                  width: 100%;
+                  /* ИЗМЕНЕНИЕ: Высота строго до -500 (300px) */
+                  height: 302px; 
+                  border-left: 1px solid #eee;
+                  border-bottom: 1px solid #eee;
+                  background-image: linear-gradient(to bottom, #eee 1px, transparent 1px);
+                  background-size: 100% 30px; /* Шаг 30px = 100 единиц */
+                }
+                
+                .zero-line {
+                  position: absolute;
+                  top: 150px; /* Ноль */
+                  width: 100%;
+                  height: 2px;
+                  background: rgba(0,0,0,0.2);
+                  z-index: 1;
+                }
+
+                /* SVG */
+                .chart-svg-layer {
+                  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                  overflow: visible;
+                }
+                .chart-line-path {
+                  fill: none;
+                  stroke: #333;
+                  stroke-width: 3;
+                  stroke-linecap: round;
+                  stroke-linejoin: round;
+                  stroke-dasharray: 1500;
+                  stroke-dashoffset: 1500;
+                  transition: stroke-dashoffset 4s ease-in-out;
+                }
+                .chart-container.draw-line .chart-line-path {
+                  stroke-dashoffset: 0;
+                }
+
+                /* Точки */
+                .marker {
+                  position: absolute;
+                  width: 14px; height: 14px;
+                  border-radius: 50%;
+                  background: #fff;
+                  border: 3px solid #000;
+                  transform: translate(-50%, -50%) translateZ(20px) scale(0);
+                  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+                  z-index: 5;
+                }
+                .marker.show {
+                  transform: translate(-50%, -50%) translateZ(20px) scale(1);
+                }
+                .m-pos { border-color: var(--c-pos); }
+                .m-neg { border-color: var(--c-neg); }
+
+                /* Лейбл значения */
+                .marker-label {
+                  position: absolute;
+                  top: -30px; left: 50%; transform: translateX(-50%);
+                  font-weight: bold; color: var(--c-neg);
+                  white-space: nowrap; font-size: 1rem;
+                }
+
+                /* 4. AI RESPONSE */
+                .ai-response {
+                  position: absolute;
+                  bottom: -150px; 
+                  left: 0;
+                  width: 100%;
+                  background: #fff;
+                  border: 1px solid #eee;
+                  border-radius: 12px;
+                  padding: 20px;
+                  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+                  display: flex;
+                  align-items: flex-start;
+                  gap: 15px;
+                  opacity: 0;
+                  transform: translateY(40px) translateZ(60px); 
+                  transition: all 0.8s ease;
+                  z-index: 30; 
+                }
+                .ai-response.active {
+                  opacity: 1;
+                  transform: translateY(-30px) translateZ(60px);
+                }
+                .ai-avatar {
+                  width: 40px; height: 40px; background: #000;
+                  border-radius: 50%; display: flex; 
+                  align-items: center; justify-content: center;
+                  color: #fff; font-size: 0.7rem; font-weight: bold; flex-shrink: 0;
+                }
+                
+                .cards-wrapper {
+                    position: absolute;
+                    right: -200px;
+                    top: 50px;
+                    display: flex; flex-direction: column; gap: 10px;
+                }
+                .info-card {
+                    background: rgba(255,255,255,0.9);
+                    padding: 8px 12px; border-radius: 6px;
+                    border-left: 3px solid #ccc; width: 150px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                    transform: translateX(30px); opacity: 0; transition: all 0.5s;
+                }
+                .info-card.visible { opacity: 1; transform: translateX(0); }
+
+              `}</style>
+
+              <div className="scene">
+
+                {/* --- STEP 0: QUESTION --- */}
+                <div className={`chat-bubble-user ${step === 0 ? 'active' : 'exit'}`}>
+                   {/* ИЗМЕНЕНИЕ: Иконка пользователя СЛЕВА от текста */}
+                  <div className="user-icon">👤</div>
+                  <div className="bubble-text">
+                    «Какой прогноз по деньгам на 25-е число?»
+                  </div>
+                </div>
+
+                {/* --- STEP 1: PROCESSING --- */}
+                <div className={`loader-wrapper ${step === 1 ? 'active' : ''}`}>
+                  <div className="cube-spinner">
+                    <div className="cube-face"></div><div className="cube-face"></div>
+                    <div className="cube-face"></div><div className="cube-face"></div>
+                    <div className="cube-face"></div><div className="cube-face"></div>
+                  </div>
+                </div>
+
+                {/* --- STEP 2-4: GRAPH --- */}
+                <div className={`chart-container ${step >= 2 && step <= 4 ? 'active' : ''} ${step === 5 ? 'fade-out' : ''} ${step >= 3 ? 'draw-line' : ''}`}>
+                  
+                  {/* Сетка с шагом 30px, высота ограничена 302px (до -500) */}
+                  <div className="grid-lines"></div>
+                  <div className="zero-line"></div>
+
+                  {/* Лейблы (убрали всё, что ниже -500) */}
+                  <div className="y-axis-labels" style={{top: '-3px'}}>
+                    <div style={{position: 'absolute', top: '0px'}}>+500</div>
+                    <div style={{position: 'absolute', top: '30px'}}>+400</div>
+                    <div style={{position: 'absolute', top: '60px'}}>+300</div>
+                    <div style={{position: 'absolute', top: '90px'}}>+200</div>
+                    <div style={{position: 'absolute', top: '120px'}}>+100</div>
+                    <div style={{position: 'absolute', top: '143px', color: '#000'}}>0</div>
+                    <div style={{position: 'absolute', top: '180px'}}>-100</div>
+                    <div style={{position: 'absolute', top: '210px'}}>-200</div>
+                    <div style={{position: 'absolute', top: '240px'}}>-300</div>
+                    <div style={{position: 'absolute', top: '270px'}}>-400</div>
+                    <div style={{position: 'absolute', top: '300px'}}>-500</div>
+                  </div>
+
+                  {/* SVG LINE */}
+                  {/* 
+                      Scale: 30px = 100 units. Zero Y = 150.
+                      Start: (50, 150)
+                      Point 1: +150 -> Y = 150 - 45 = 105px.
+                      Point 2: +200 -> Y = 150 - 60 = 90px.
+                      Point 3: -250 -> Y = 150 + 75 = 225px.
+                  */}
+                  <svg className="chart-svg-layer">
+                     <path
+                       className="chart-line-path"
+                       d="M 0 150 L 200 105 L 350 90 L 500 225"
+                     />
+                  </svg>
+
+                  {/* Start Point (0) */}
+                  <div className={`marker m-pos ${step >= 3 ? 'show' : ''}`} style={{left: '0px', top: '150px', transitionDelay: '0ms'}}></div>
+                  
+                  {/* Point 1: +150 (Green) */}
+                  <div className={`marker m-pos ${step >= 3 ? 'show' : ''}`} style={{left: '200px', top: '105px', transitionDelay: '100ms'}}>
+                     <div className="marker-label" style={{color: 'var(--c-pos)'}}>+150 000 ₽</div>
+                  </div>
+
+                  {/* Point 2: +200 (Green) */}
+                  <div className={`marker m-pos ${step >= 3 ? 'show' : ''}`} style={{left: '350px', top: '90px', transitionDelay: '200ms'}}>
+                     <div className="marker-label" style={{color: 'var(--c-pos)'}}>+50 000 ₽</div>
+                  </div>
+
+                  {/* Point 3: -250 (Red) */}
+                  <div className={`marker m-neg ${step >= 3 ? 'show' : ''}`} style={{left: '500px', top: '225px', transitionDelay: '300ms'}}>
+                     <div className="marker-label">-250 000 ₽</div>
+                  </div>
+                  
+                  {/* Карточки */}
+                  <div className="cards-wrapper">
+                    <div className={`info-card ${step >= 3 ? 'visible' : ''}`} style={{borderLeftColor: 'var(--c-pos)', transitionDelay: '400ms'}}>
+                        Выручка (неделя): <b>+150k</b>
+                    </div>
+                    <div className={`info-card ${step >= 3 ? 'visible' : ''}`} style={{borderLeftColor: 'var(--c-pos)', transitionDelay: '500ms'}}>
+                        Аванс (банкет): <b>+50k</b>
+                    </div>
+                    <div className={`info-card ${step >= 3 ? 'visible' : ''}`} style={{borderLeftColor: 'var(--c-neg)', transitionDelay: '600ms'}}>
+                        Аренда и ЗП: <b>-450k</b>
+                    </div>
+                  </div>
+
+                  {/* AI RESPONSE */}
+                  <div className={`ai-response ${step === 4 ? 'active' : ''}`}>
+                     <div className="ai-avatar">AI</div>
+                     <div>
+                       <div style={{fontSize: '0.85rem', color: '#666'}}>Анализ завершен</div>
+                       <div style={{color: '#000', fontWeight: '500', fontSize: '0.95rem'}}>
+                         К 25-му числу прогнозируется <span style={{color: 'var(--c-neg)'}}>кассовый разрыв</span>. <br/>
+                         Причина: плановые выплаты аренды и зарплат (-450к).
+                       </div>
+                     </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<FinancialVisChat />);
+    </script>
+</body>
+</html>

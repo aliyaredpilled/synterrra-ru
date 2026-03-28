@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syntera Prism Visualization</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* ОСНОВНЫЕ ЦВЕТА */
+            --c-bg: #ffffff;
+            --c-glass: rgba(0, 0, 0, 0.02);
+            --c-glass-border: rgba(0, 0, 0, 0.1);
+
+            /* АКЦЕНТЫ */
+            --c-accent-primary: #4f46e5;
+            --c-accent-secondary: #9333ea;
+            --c-accent-light: #0891b2;
+
+            /* ТЕКСТ */
+            --c-text-main: #000000;
+            --c-text-muted: rgba(0, 0, 0, 0.5);
+
+            /* СКОРОСТЬ */
+            --anim-speed: 8s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--c-bg);
+            color: var(--c-text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* --- СЦЕНА --- */
+        .scene {
+            width: 100%;
+            height: 100%;
+            perspective: 2500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .pipeline {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 600px;
+            height: 540px;
+            transform-style: preserve-3d;
+            transform: translate(-50%, -50%) rotateX(48deg) rotateZ(-24deg) scale(0.85);
+            transition: transform 0.5s ease;
+        }
+
+        .scene:hover .pipeline {
+            transform: translate(-50%, -50%) rotateX(55deg) rotateZ(-45deg) scale(0.95);
+        }
+
+        .zone {
+            position: absolute;
+            transform-style: preserve-3d;
+        }
+
+        /* --- ТЕКСТОВЫЕ ПОДПИСИ (Новая камера) --- */
+        .zone-label {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%) translateZ(5px) rotateX(-50deg);
+
+            color: var(--c-text-main);
+            font-size: 14px;
+            font-weight: 800;
+            white-space: nowrap;
+            letter-spacing: 1px;
+            opacity: 0.2;
+            pointer-events: none; /* Чтобы не мешало мыши */
+        }
+
+        /* Анимация последовательной подсветки (оставил без изменений логику) */
+        .label-raw { animation: fade-in-sequence var(--anim-speed) linear infinite; animation-delay: 0s; }
+        .label-proc { animation: fade-in-sequence var(--anim-speed) linear infinite; animation-delay: 2.5s; }
+        .label-out { animation: fade-in-sequence var(--anim-speed) linear infinite; animation-delay: 5s; }
+
+        @keyframes fade-in-sequence {
+            0% { opacity: 0.2; transform: translateX(-50%) translateZ(5px) rotateX(-50deg) scale(1); }
+            5% { opacity: 1; transform: translateX(-50%) translateZ(5px) rotateX(-50deg) scale(1.1); }
+            25% { opacity: 1; }
+            40% { opacity: 0.2; transform: translateX(-50%) translateZ(5px) rotateX(-50deg) scale(1); }
+            100% { opacity: 0.2; }
+        }
+
+        /* --- ЗОНА 1: RAW AUDIO --- */
+        .zone-chaos {
+            top: 49%;
+            left: 17%;
+            width: 100px; height: 100px;
+            transform: translate(-50%, -50%) translateZ(0px);
+        }
+
+        .audio-sphere {
+            position: absolute;
+            width: 80px; height: 80px;
+            top: 10px; left: 10px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(147, 51, 234, 0.1), transparent);
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            box-shadow: inset 0 0 20px rgba(147, 51, 234, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .audio-wave {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid var(--c-accent-secondary);
+            opacity: 0;
+            animation: ripple 2s linear infinite;
+        }
+        .w1 { width: 30%; height: 30%; animation-delay: 0s; }
+        .w2 { width: 30%; height: 30%; animation-delay: 0.6s; }
+        .w3 { width: 30%; height: 30%; animation-delay: 1.2s; }
+
+        @keyframes ripple {
+            0% { width: 20%; height: 20%; opacity: 1; border-width: 3px; }
+            100% { width: 100%; height: 100%; opacity: 0; border-width: 0px; }
+        }
+
+        .audio-core {
+            width: 20px; height: 20px;
+            background: var(--c-accent-secondary);
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--c-accent-secondary);
+        }
+
+        /* --- TRAVELER --- */
+        .data-packet {
+            position: absolute;
+            width: 15px; height: 15px;
+            background: var(--c-text-main);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            top: 50%; left: 50%;
+            opacity: 0;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            animation: travel-to-prism var(--anim-speed) ease-in-out infinite;
+        }
+
+        /* --- ЗОНА 2: ПРИЗМА (PROCESSING) --- */
+        .zone-prism {
+            top: 50%;
+            left: 48%;
+            width: 180px; height: 220px;
+            transform: translate(-50%, -50%) translateZ(15px);
+        }
+
+        .glass-layer {
+            position: absolute;
+            width: 100%; height: 100%;
+            background: var(--c-glass);
+            border: 1px solid var(--c-glass-border);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .layer-1 {
+            transform: translateZ(0px);
+            background-image: linear-gradient(var(--c-glass-border) 1px, transparent 1px),
+            linear-gradient(90deg, var(--c-glass-border) 1px, transparent 1px);
+            background-size: 20px 20px;
+            animation: float-layer 4s ease-in-out infinite alternate;
+        }
+
+        .layer-2 {
+            transform: translateZ(40px);
+            animation: float-layer 4s ease-in-out infinite alternate-reverse;
+        }
+        .neural-network { width: 80%; height: 80%; position: relative; }
+        .node {
+            position: absolute;
+            width: 8px; height: 8px;
+            background: var(--c-accent-primary);
+            border-radius: 50%;
+        }
+        .connections { position: absolute; width: 100%; height: 100%; top: 0; left: 0; }
+        .connections line { stroke: var(--c-glass-border); stroke-width: 1.5; }
+
+        .layer-3 {
+            transform: translateZ(80px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            animation: float-layer 5s ease-in-out infinite alternate;
+        }
+        .scanner-line {
+            position: absolute;
+            width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--c-accent-light), transparent);
+            top: 0;
+            animation: scan-vertical 3s ease-in-out infinite;
+        }
+        .prism-flash {
+            position: absolute;
+            width: 200%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent);
+            transform: skewX(-20deg) translateX(-150%);
+            animation: flash-pass var(--anim-speed) ease-in-out infinite;
+        }
+
+        /* --- ЗОНА 3: ВЫХОД (STRUCTURED DATA) --- */
+        .zone-output {
+            top: 50%;
+            left: 83%;
+            width: 140px; height: 180px;
+            transform: translate(-50%, -50%) translateZ(30px);
+        }
+
+        .result-card {
+            position: absolute;
+            width: 100%; height: 100%;
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 12px;
+            transform-style: preserve-3d;
+            transform-origin: center center;
+            opacity: 0;
+            box-shadow: -5px 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 12px;
+            transform: translateZ(-2px);
+            background: #e5e5e5;
+        }
+
+        .card-content { padding: 20px; transform: translateZ(1px); }
+        .card-line {
+            height: 8px;
+            background: rgba(0,0,0,0.1);
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+        .card-header { width: 60%; height: 12px; background: var(--c-text-main); margin-bottom: 15px; }
+        .card-avatar { width: 20px; height: 20px; background: var(--c-accent-light); border-radius: 50%; float: left; margin-right: 8px; }
+
+        .final-card {
+            animation: card-spawn var(--anim-speed) ease-in-out infinite;
+        }
+
+        /* --- KEYFRAMES --- */
+        @keyframes float-layer {
+            0% { transform: translateZ(var(--z, 0)) translateY(0); }
+            100% { transform: translateZ(var(--z, 0)) translateY(-10px); }
+        }
+        @keyframes scan-vertical {
+            0%, 100% { top: 5%; opacity: 0; }
+            10%, 90% { opacity: 1; }
+            50% { top: 90%; }
+        }
+
+        @keyframes travel-to-prism {
+            0% { transform: translate(-50%, -50%) translateZ(0px) scale(0); opacity: 0; left: 17%; }
+            5% { transform: translate(-50%, -50%) translateZ(0px) scale(1); opacity: 1; left: 17%; }
+            30% { transform: translate(-50%, -50%) translateZ(15px) scale(0.8); left: 48%; opacity: 1; }
+            45% { transform: translate(-50%, -50%) translateZ(80px) scale(2); left: 48%; opacity: 0; filter: blur(5px); }
+            100% { opacity: 0; }
+        }
+
+        @keyframes flash-pass {
+            0%, 30% { transform: translateX(-150%) skewX(-20deg); opacity: 0; }
+            35% { opacity: 1; }
+            45% { transform: translateX(150%) skewX(-20deg); opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* АНИМАЦИЯ КАРТОЧКИ - появляется слева и движется к центру */
+        @keyframes card-spawn {
+            0%, 40% {
+                transform: translateX(-60px) translateZ(15px) rotateX(0) scale(0.8) translateY(30px);
+                opacity: 0;
+                left: 50%;
+            }
+            50% {
+                opacity: 1;
+                transform: translateX(0px) translateZ(30px) rotateX(0) scale(1) translateY(30px);
+                left: 50%; /* Центр зоны */
+                box-shadow: -15px 15px 30px rgba(0,0,0,0.12);
+            }
+            60% {
+                transform: translateX(0px) translateZ(30px) rotateX(0) scale(1) translateY(30px);
+                left: 50%;
+                opacity: 1;
+            }
+            /* Улетает вверх с меньшей амплитудой */
+            75% {
+                transform: translateX(0px) translateZ(80px) rotateX(5deg) scale(0.97) translateY(-30px);
+                left: 50%; /* Остается на месте */
+                opacity: 0.7;
+            }
+            90% {
+                transform: translateX(0px) translateZ(120px) rotateX(8deg) scale(0.95) translateY(-60px);
+                left: 50%; /* Остается на месте */
+                opacity: 0.2;
+            }
+            100% {
+                transform: translateX(0px) translateZ(140px) rotateX(10deg) scale(0.9) translateY(-80px);
+                left: 50%; /* Остается на месте */
+                opacity: 0;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scene">
+        <div class="pipeline">
+
+            <div class="data-packet"></div>
+
+            <!-- ЗОНА 1 -->
+            <div class="zone zone-chaos">
+                <div class="audio-sphere">
+                    <div class="audio-wave w1"></div>
+                    <div class="audio-wave w2"></div>
+                    <div class="audio-wave w3"></div>
+                    <div class="audio-core"></div>
+                </div>
+                <div class="zone-label label-raw">RAW AUDIO</div>
+            </div>
+
+            <!-- ЗОНА 2 -->
+            <div class="zone zone-prism">
+                <div class="glass-layer layer-1" style="--z: 0px"></div>
+                <div class="glass-layer layer-2" style="--z: 40px">
+                    <div class="neural-network">
+                        <svg class="connections">
+                            <line x1="20%" y1="20%" x2="50%" y2="50%" />
+                            <line x1="80%" y1="20%" x2="50%" y2="50%" />
+                            <line x1="20%" y1="80%" x2="50%" y2="50%" />
+                            <line x1="80%" y1="80%" x2="50%" y2="50%" />
+                        </svg>
+                        <div class="node" style="top: 20%; left: 20%"></div>
+                        <div class="node" style="top: 20%; left: 80%"></div>
+                        <div class="node" style="top: 50%; left: 50%; transform: scale(1.5); background: var(--c-text-main);"></div>
+                        <div class="node" style="top: 80%; left: 20%"></div>
+                        <div class="node" style="top: 80%; left: 80%"></div>
+                    </div>
+                </div>
+                <div class="glass-layer layer-3" style="--z: 80px">
+                    <div class="scanner-line"></div>
+                    <div class="prism-flash"></div>
+                </div>
+                <div class="zone-label label-proc">PROCESSING</div>
+            </div>
+
+            <!-- ЗОНА 3 -->
+            <div class="zone zone-output">
+                <div class="result-card" style="transform: translateZ(-10px); opacity: 0.5;"></div>
+                <div class="result-card final-card">
+                    <div class="card-content">
+                        <div class="card-line card-header"></div>
+                        <div class="card-body">
+                            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                <div class="card-avatar"></div>
+                                <div class="card-line" style="width: 40%; margin: 0;"></div>
+                            </div>
+                            <div class="card-line" style="width: 90%"></div>
+                            <div class="card-line" style="width: 70%"></div>
+                            <div class="card-line" style="width: 80%"></div>
+                        </div>
+                        <div style="position: absolute; bottom: 15px; right: 15px; width: 10px; height: 10px; background: var(--c-accent-light); border-radius: 2px;"></div>
+                    </div>
+                </div>
+                 <div class="zone-label label-out">STRUCTURED DATA</div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

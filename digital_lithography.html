@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Lithography</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #ffffff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        #info {
+            display: none; /* скрываем act 1/6 и проценты */
+        }
+        .timeline {
+            position: fixed;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 20;
+        }
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+            transition: all 0.6s ease;
+        }
+        .timeline-item.active { opacity: 1; }
+        .timeline-item.completed { opacity: 0.6; }
+        .timeline-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+            border: 2px solid #999;
+            transition: all 0.6s ease;
+        }
+        .timeline-item.active .timeline-dot {
+            background: #1a1a1a;
+            border-color: #1a1a1a;
+            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        }
+        .timeline-item.completed .timeline-dot {
+            background: #444;
+            border-color: #444;
+        }
+        .timeline-label {
+            font-size: 14px; /* увеличено с 9px */
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #999;
+            font-family: monospace;
+            font-weight: 500; /* добавили жирность */
+        }
+        .timeline-item.active .timeline-label { color: #1a1a1a; }
+        .timeline-item.completed .timeline-label { color: #444; }
+        .stage-label {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 300;
+            letter-spacing: 3px;
+            color: rgba(0,0,0,0.6);
+            text-transform: uppercase;
+            z-index: 20;
+            transition: all 0.8s ease;
+        }
+        .center-text {
+            position: fixed;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 15;
+            pointer-events: none;
+            transition: opacity 1.5s ease;
+        }
+        .center-text h1 {
+            font-size: 18px;
+            font-weight: 300;
+            letter-spacing: 3px;
+            color: #1a1a1a;
+        }
+        .final-text {
+            position: fixed;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 25;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+        .final-text h2 {
+            font-size: 18px;
+            font-weight: 300;
+            letter-spacing: 3px;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        .final-text p {
+            font-size: 11px;
+            color: rgba(0,0,0,0.5);
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Loading...</div>
+
+    <div class="timeline" id="timeline">
+        <div class="timeline-item" data-stage="0">
+            <div class="timeline-dot"></div>
+            <div class="timeline-label">Данные</div>
+        </div>
+        <div class="timeline-item" data-stage="1">
+            <div class="timeline-dot"></div>
+            <div class="timeline-label">Синтез</div>
+        </div>
+        <div class="timeline-item" data-stage="2">
+            <div class="timeline-dot"></div>
+            <div class="timeline-label">Граф</div>
+        </div>
+        <div class="timeline-item" data-stage="3">
+            <div class="timeline-dot"></div>
+            <div class="timeline-label">Агент</div>
+        </div>
+        <div class="timeline-item" data-stage="4">
+            <div class="timeline-dot"></div>
+            <div class="timeline-label">Кластер</div>
+        </div>
+        <div class="timeline-item" data-stage="5">
+            <div class="timeline-dot"></div>
+            <div class="timeline-label">Рой</div>
+        </div>
+    </div>
+
+    <div class="center-text" id="centerText">
+        <h1>ИНЖЕНЕРНЫЙ ПОДХОД К ГОСУДАРСТВЕННОМУ УПРАВЛЕНИЮ</h1>
+    </div>
+
+    <div class="stage-label" id="stageLabel">МАССИВ ДАННЫХ</div>
+
+    <div id="labelsData" style="display:none;">
+        <span data-index="0">МАССИВ ДАННЫХ</span>
+        <span data-index="1">НОРМАЛИЗАЦИЯ И СТРУКТУРИЗАЦИЯ</span>
+        <span data-index="2">ПОСТРОЕНИЕ ГРАФА ЗНАНИЙ</span>
+        <span data-index="3">КОГНИТИВНОЕ ЯДРО</span>
+        <span data-index="4">МУЛЬТИАГЕНТНАЯ АРХИТЕКТУРА</span>
+        <span data-index="5">СТРАТЕГИЧЕСКОЕ УПРАВЛЕНИЕ</span>
+    </div>
+
+    <div class="final-text" id="finalText">
+        <h2>От одного факта - к стратегии государства</h2>
+        <p>Мультиагентная ИИ-система Аппарата Правительства РФ</p>
+    </div>
+
+    <!-- Agent labels will be rendered in 3D space next to nodes -->
+
+    <script>
+        var info = document.getElementById('info');
+        info.textContent = 'Loading Three.js...';
+
+        var script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+        script.onload = function() {
+            info.textContent = 'Starting...';
+            setTimeout(startApp, 100);
+        };
+        script.onerror = function() {
+            info.textContent = 'ERROR: Failed to load Three.js!';
+        };
+        document.head.appendChild(script);
+
+        // Smooth easing functions
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+        function easeOutQuart(t) {
+            return 1 - Math.pow(1 - t, 4);
+        }
+        function easeInOutQuad(t) {
+            return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        }
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function startApp() {
+            try {
+                // Scene setup
+                var scene = new THREE.Scene();
+                scene.background = new THREE.Color(0xffffff);
+
+                var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+                camera.position.set(0, 0, 50);
+
+                var renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                document.body.insertBefore(renderer.domElement, document.body.firstChild);
+
+                // Lights
+                scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+                var dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+                dirLight.position.set(10, 20, 15);
+                scene.add(dirLight);
+                var dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+                dirLight2.position.set(-10, -10, -15);
+                scene.add(dirLight2);
+
+                // ============================================
+                // ACT 1-2: FRACTALS -> RINGS -> SPHERE
+                // ============================================
+
+                var fractals = [];
+                var fractalGeometries = [
+                    new THREE.TetrahedronGeometry(0.15),
+                    new THREE.OctahedronGeometry(0.13),
+                    new THREE.IcosahedronGeometry(0.11)
+                ];
+
+                // Sphere target position for fractals to merge into
+                var sphereTargetY = 14;
+                var sphereRadius = 5;
+
+                for (var i = 0; i < 400; i++) {
+                    var geom = fractalGeometries[Math.floor(Math.random() * fractalGeometries.length)];
+                    var mat = new THREE.MeshStandardMaterial({
+                        color: new THREE.Color().setHSL(0, 0, 0.15 + Math.random() * 0.15),
+                        metalness: 0.4,
+                        roughness: 0.6,
+                        transparent: true,
+                        opacity: 0.85
+                    });
+                    var mesh = new THREE.Mesh(geom, mat);
+
+                    // IMPORTANT: radius must be less than ring radius (rings are ~6 radius)
+                    // Fractals start inside the rings
+                    var angle = Math.random() * Math.PI * 2;
+                    var radius = 0.5 + Math.random() * 4.5; // Max 5, inside rings
+                    mesh.position.set(
+                        Math.cos(angle) * radius,
+                        -35 + Math.random() * 8,
+                        Math.sin(angle) * radius
+                    );
+                    mesh.rotation.set(
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI
+                    );
+
+                    // Target position on sphere surface - spherical coordinates
+                    // Fibonacci sphere distribution for even coverage
+                    var phi = Math.acos(1 - 2 * (i + 0.5) / 400);
+                    var theta = Math.PI * (1 + Math.sqrt(5)) * i;
+
+                    var radiusVariation = sphereRadius * (0.9 + Math.random() * 0.1); // Slight radius variation for depth
+                    var targetX = radiusVariation * Math.sin(phi) * Math.cos(theta);
+                    var targetY = sphereTargetY + radiusVariation * Math.cos(phi);
+                    var targetZ = radiusVariation * Math.sin(phi) * Math.sin(theta);
+
+                    mesh.userData = {
+                        startPos: mesh.position.clone(),
+                        angle: angle,
+                        radius: radius,
+                        rotSpeed: (Math.random() - 0.5) * 0.02,
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 0.3 + Math.random() * 0.4,
+                        // Target position on sphere surface
+                        targetX: targetX,
+                        targetY: targetY,
+                        targetZ: targetZ
+                    };
+                    fractals.push(mesh);
+                    scene.add(mesh);
+                }
+
+                // Chemical bonds between fractals (will appear during merging)
+                var fractalBonds = [];
+                var bondMaterial = new THREE.LineBasicMaterial({ color: 0x333333, transparent: true, opacity: 0 });
+
+                // Create bonds between nearby fractals
+                for (var bi = 0; bi < fractals.length; bi++) {
+                    // Each fractal connects to 2-3 neighbors
+                    var numBonds = 2 + Math.floor(Math.random() * 2);
+                    for (var bj = 0; bj < numBonds; bj++) {
+                        var neighborIndex = (bi + 1 + bj * 3) % fractals.length;
+                        var bondGeom = new THREE.BufferGeometry().setFromPoints([
+                            fractals[bi].position.clone(),
+                            fractals[neighborIndex].position.clone()
+                        ]);
+                        var bond = new THREE.Line(bondGeom, bondMaterial.clone());
+                        bond.userData = { from: bi, to: neighborIndex };
+                        fractalBonds.push(bond);
+                        scene.add(bond);
+                    }
+                }
+
+                // Processing rings
+                var rings = [];
+                var ringPositions = [-18, -8, 2, 12];
+
+                for (var r = 0; r < ringPositions.length; r++) {
+                    var ringGeom = new THREE.TorusGeometry(6 - r * 0.3, 0.12, 16, 64);
+                    var ringMat = new THREE.MeshStandardMaterial({
+                        color: 0x333333,
+                        metalness: 0.7,
+                        roughness: 0.3,
+                        transparent: true,
+                        opacity: 0
+                    });
+                    var ring = new THREE.Mesh(ringGeom, ringMat);
+                    ring.rotation.x = Math.PI / 2;
+                    ring.position.y = ringPositions[r];
+                    rings.push(ring);
+                    scene.add(ring);
+                }
+
+                // SPHERE (black ball formed by fractals) - slightly smaller than fractal cloud
+                var sphereGeom = new THREE.SphereGeometry(4.5, 32, 32);
+                var sphereMat = new THREE.MeshStandardMaterial({
+                    color: 0x1a1a1a,
+                    metalness: 0.6,
+                    roughness: 0.4,
+                    transparent: true,
+                    opacity: 0
+                });
+                var sphere = new THREE.Mesh(sphereGeom, sphereMat);
+                sphere.position.y = 14;
+                scene.add(sphere);
+
+                // ============================================
+                // ACT 3: GRAPH NETWORK (all nodes are cylinders)
+                // ============================================
+
+                var graphNodes = [];
+                var graphNodeGeom = new THREE.CylinderGeometry(1.2, 1.2, 2, 24);
+
+                // Central node (our cylinder from above)
+                var centralNode = new THREE.Mesh(
+                    new THREE.CylinderGeometry(1.5, 1.5, 2.5, 32),
+                    new THREE.MeshStandardMaterial({
+                        color: 0x1a1a1a,
+                        metalness: 0.6,
+                        roughness: 0.4,
+                        transparent: true,
+                        opacity: 0
+                    })
+                );
+                centralNode.position.set(0, 0, 0);
+                graphNodes.push(centralNode);
+                scene.add(centralNode);
+
+                // Surrounding nodes - arranged in concentric circles for clear connections
+                var nodePositions = [];
+                // Inner ring - 6 nodes
+                for (var ni = 0; ni < 6; ni++) {
+                    var na = (ni / 6) * Math.PI * 2;
+                    nodePositions.push({ x: Math.cos(na) * 10, z: Math.sin(na) * 10, ring: 1 });
+                }
+                // Outer ring - 10 nodes
+                for (var no = 0; no < 10; no++) {
+                    var nao = (no / 10) * Math.PI * 2 + 0.3;
+                    nodePositions.push({ x: Math.cos(nao) * 18, z: Math.sin(nao) * 18, ring: 2 });
+                }
+
+                for (var n = 0; n < nodePositions.length; n++) {
+                    var nodeMat = new THREE.MeshStandardMaterial({
+                        color: new THREE.Color().setHSL(0, 0, 0.2 + Math.random() * 0.1),
+                        metalness: 0.5,
+                        roughness: 0.5,
+                        transparent: true,
+                        opacity: 0
+                    });
+                    var node = new THREE.Mesh(graphNodeGeom.clone(), nodeMat);
+                    node.position.set(nodePositions[n].x, 0, nodePositions[n].z);
+                    node.userData = {
+                        basePos: node.position.clone(),
+                        phase: Math.random() * Math.PI * 2,
+                        ring: nodePositions[n].ring
+                    };
+                    graphNodes.push(node);
+                    scene.add(node);
+                }
+
+                // Graph edges - FULLY CONNECTED
+                var graphEdges = [];
+                var edgeMat = new THREE.LineBasicMaterial({ color: 0x555555, transparent: true, opacity: 0 });
+
+                // Connect central to all inner ring
+                for (var ei = 1; ei <= 6; ei++) {
+                    var edgeGeom = new THREE.BufferGeometry().setFromPoints([
+                        centralNode.position.clone(),
+                        graphNodes[ei].position.clone()
+                    ]);
+                    var edge = new THREE.Line(edgeGeom, edgeMat.clone());
+                    edge.userData = { from: 0, to: ei };
+                    graphEdges.push(edge);
+                    scene.add(edge);
+                }
+
+                // Connect inner ring nodes to each other (hexagon)
+                for (var eih = 1; eih <= 6; eih++) {
+                    var nextH = eih === 6 ? 1 : eih + 1;
+                    var edgeGeomH = new THREE.BufferGeometry().setFromPoints([
+                        graphNodes[eih].position.clone(),
+                        graphNodes[nextH].position.clone()
+                    ]);
+                    var edgeH = new THREE.Line(edgeGeomH, edgeMat.clone());
+                    edgeH.userData = { from: eih, to: nextH };
+                    graphEdges.push(edgeH);
+                    scene.add(edgeH);
+                }
+
+                // Connect inner to outer ring
+                for (var eio = 7; eio < graphNodes.length; eio++) {
+                    // Find closest inner node
+                    var closestInner = 1;
+                    var closestDist = 1000;
+                    for (var ci = 1; ci <= 6; ci++) {
+                        var d = graphNodes[eio].position.distanceTo(graphNodes[ci].position);
+                        if (d < closestDist) {
+                            closestDist = d;
+                            closestInner = ci;
+                        }
+                    }
+                    var edgeGeomIO = new THREE.BufferGeometry().setFromPoints([
+                        graphNodes[closestInner].position.clone(),
+                        graphNodes[eio].position.clone()
+                    ]);
+                    var edgeIO = new THREE.Line(edgeGeomIO, edgeMat.clone());
+                    edgeIO.userData = { from: closestInner, to: eio };
+                    graphEdges.push(edgeIO);
+                    scene.add(edgeIO);
+                }
+
+                // Connect outer ring nodes
+                for (var eo = 7; eo < graphNodes.length; eo++) {
+                    var nextO = eo === graphNodes.length - 1 ? 7 : eo + 1;
+                    var edgeGeomO = new THREE.BufferGeometry().setFromPoints([
+                        graphNodes[eo].position.clone(),
+                        graphNodes[nextO].position.clone()
+                    ]);
+                    var edgeO = new THREE.Line(edgeGeomO, edgeMat.clone());
+                    edgeO.userData = { from: eo, to: nextO };
+                    graphEdges.push(edgeO);
+                    scene.add(edgeO);
+                }
+
+                // ============================================
+                // ACT 4: EMBODIMENT - Graph inside icosahedral shell
+                // ============================================
+
+                // Compressed graph sphere (will contain the knowledge)
+                var graphSphereGeom = new THREE.IcosahedronGeometry(4, 1);
+                var graphSphereMat = new THREE.MeshStandardMaterial({
+                    color: 0x333333,
+                    metalness: 0.3,
+                    roughness: 0.7,
+                    transparent: true,
+                    opacity: 0,
+                    wireframe: true
+                });
+                var graphSphere = new THREE.Mesh(graphSphereGeom, graphSphereMat);
+                scene.add(graphSphere);
+
+                // Icosahedral shell (the Agent's body)
+                var shellGeom = new THREE.IcosahedronGeometry(6, 0);
+                var shellMat = new THREE.MeshStandardMaterial({
+                    color: 0x666666,
+                    metalness: 0.8,
+                    roughness: 0.2,
+                    transparent: true,
+                    opacity: 0,
+                    wireframe: true
+                });
+                var shell = new THREE.Mesh(shellGeom, shellMat);
+                scene.add(shell);
+
+                // Outer glass layer
+                var glassGeom = new THREE.IcosahedronGeometry(7, 1);
+                var glassMat = new THREE.MeshStandardMaterial({
+                    color: 0x888888,
+                    metalness: 0.9,
+                    roughness: 0.1,
+                    transparent: true,
+                    opacity: 0
+                });
+                var glass = new THREE.Mesh(glassGeom, glassMat);
+                scene.add(glass);
+
+                // ============================================
+                // ACT 5: SUPERVISOR CLUSTER (Pentagon with 5 agents)
+                // ============================================
+
+                // Supervisor (central crystal/prism)
+                var supervisorGeom = new THREE.OctahedronGeometry(4, 0);
+                var supervisorMat = new THREE.MeshStandardMaterial({
+                    color: 0x1a1a1a,
+                    metalness: 0.9,
+                    roughness: 0.1,
+                    transparent: true,
+                    opacity: 0
+                });
+                var supervisor = new THREE.Mesh(supervisorGeom, supervisorMat);
+                scene.add(supervisor);
+
+                // 5 Agent shells around supervisor
+                var agentColors = [
+                    0x1a1a1a, // Аналитик - Black
+                    0x1a1a1a, // Критик - Black
+                    0x1a1a1a, // Планировщик - Black
+                    0x1a1a1a, // Исследователь - Black
+                    0x1a1a1a  // Валидатор - Black
+                ];
+                var agentNames = ['АНАЛИТИК', 'КРИТИК', 'ПЛАНИРОВЩИК', 'ИССЛЕДОВАТЕЛЬ', 'ВАЛИДАТОР'];
+                var clusterAgents = [];
+
+                // Create HTML labels for agents
+                var agentLabelElements = [];
+                for (var al = 0; al < 5; al++) {
+                    var labelDiv = document.createElement('div');
+                    labelDiv.style.position = 'fixed';
+                    labelDiv.style.fontFamily = 'monospace';
+                    labelDiv.style.fontSize = '11px';
+                    labelDiv.style.fontWeight = 'bold';
+                    labelDiv.style.color = '#1a1a1a';
+                    labelDiv.style.textShadow = '0 0 3px white, 0 0 3px white';
+                    labelDiv.style.pointerEvents = 'none';
+                    labelDiv.style.zIndex = '30';
+                    labelDiv.style.opacity = '0';
+                    labelDiv.style.transition = 'opacity 0.5s ease';
+                    labelDiv.textContent = agentNames[al];
+                    document.body.appendChild(labelDiv);
+                    agentLabelElements.push(labelDiv);
+                }
+
+                for (var ca = 0; ca < 5; ca++) {
+                    var agentAngle = (ca / 5) * Math.PI * 2 - Math.PI / 2;
+                    var agentRadius = 18;
+
+                    // Agent shell
+                    var agentShellGeom = new THREE.IcosahedronGeometry(3, 0);
+                    var agentShellMat = new THREE.MeshStandardMaterial({
+                        color: agentColors[ca],
+                        metalness: 0.7,
+                        roughness: 0.3,
+                        transparent: true,
+                        opacity: 0
+                    });
+                    var agentShell = new THREE.Mesh(agentShellGeom, agentShellMat);
+                    agentShell.position.set(
+                        Math.cos(agentAngle) * agentRadius,
+                        0,
+                        Math.sin(agentAngle) * agentRadius
+                    );
+
+                    // Inner graph for each agent
+                    var agentGraphGeom = new THREE.IcosahedronGeometry(1.5, 1);
+                    var agentGraphMat = new THREE.MeshBasicMaterial({
+                        color: agentColors[ca],
+                        transparent: true,
+                        opacity: 0,
+                        wireframe: true
+                    });
+                    var agentGraph = new THREE.Mesh(agentGraphGeom, agentGraphMat);
+                    agentShell.add(agentGraph);
+
+                    agentShell.userData = {
+                        name: agentNames[ca],
+                        color: agentColors[ca],
+                        angle: agentAngle,
+                        radius: agentRadius,
+                        innerGraph: agentGraph
+                    };
+
+                    clusterAgents.push(agentShell);
+                    scene.add(agentShell);
+                }
+
+                // Connection beams from supervisor to agents
+                var supervisorBeams = [];
+                var beamMat = new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0 });
+
+                for (var sb = 0; sb < 5; sb++) {
+                    var beamGeom = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(0, 0, 0),
+                        clusterAgents[sb].position.clone()
+                    ]);
+                    var beam = new THREE.Line(beamGeom, beamMat.clone());
+                    beam.userData = { agentIndex: sb };
+                    supervisorBeams.push(beam);
+                    scene.add(beam);
+                }
+
+                // ============================================
+                // ACT 6: HIVE MIND (Multiple clusters as galaxy)
+                // ============================================
+
+                var clusters = [];
+                var clusterCount = 50;
+
+                for (var hc = 0; hc < clusterCount; hc++) {
+                    var clusterGroup = new THREE.Group();
+
+                    // Central prism for each cluster
+                    var miniSupervisorGeom = new THREE.OctahedronGeometry(1.5, 0);
+                    var miniSupervisorMat = new THREE.MeshStandardMaterial({
+                        color: 0x333333,
+                        metalness: 0.8,
+                        roughness: 0.2,
+                        transparent: true,
+                        opacity: 0
+                    });
+                    var miniSupervisor = new THREE.Mesh(miniSupervisorGeom, miniSupervisorMat);
+                    clusterGroup.add(miniSupervisor);
+
+                    // Mini agents around each cluster
+                    for (var ma = 0; ma < 5; ma++) {
+                        var miniAgentGeom = new THREE.IcosahedronGeometry(0.5, 0);
+                        var miniAgentMat = new THREE.MeshStandardMaterial({
+                            color: agentColors[ma],
+                            metalness: 0.6,
+                            roughness: 0.4,
+                            transparent: true,
+                            opacity: 0
+                        });
+                        var miniAgent = new THREE.Mesh(miniAgentGeom, miniAgentMat);
+                        var miniAngle = (ma / 5) * Math.PI * 2;
+                        miniAgent.position.set(
+                            Math.cos(miniAngle) * 4,
+                            0,
+                            Math.sin(miniAngle) * 4
+                        );
+                        clusterGroup.add(miniAgent);
+                    }
+
+                    // Position clusters in a galaxy-like spiral
+                    var spiralAngle = (hc / clusterCount) * Math.PI * 6;
+                    var spiralRadius = 50 + hc * 8;
+                    var heightVar = (Math.random() - 0.5) * 40;
+
+                    clusterGroup.position.set(
+                        Math.cos(spiralAngle) * spiralRadius,
+                        heightVar,
+                        Math.sin(spiralAngle) * spiralRadius
+                    );
+                    clusterGroup.userData = {
+                        angle: spiralAngle,
+                        radius: spiralRadius,
+                        rotSpeed: 0.0005 + Math.random() * 0.001
+                    };
+
+                    clusters.push(clusterGroup);
+                    scene.add(clusterGroup);
+                }
+
+                // Global connection lines between clusters
+                var globalLines = [];
+                var globalLineMat = new THREE.LineBasicMaterial({ color: 0x999999, transparent: true, opacity: 0 });
+
+                for (var gl = 0; gl < clusters.length - 1; gl++) {
+                    if (Math.random() > 0.5) {
+                        var nextCluster = gl + 1 + Math.floor(Math.random() * 3);
+                        if (nextCluster < clusters.length) {
+                            var globalLineGeom = new THREE.BufferGeometry().setFromPoints([
+                                clusters[gl].position.clone(),
+                                clusters[nextCluster].position.clone()
+                            ]);
+                            var globalLine = new THREE.Line(globalLineGeom, globalLineMat.clone());
+                            globalLine.userData = { from: gl, to: nextCluster };
+                            globalLines.push(globalLine);
+                            scene.add(globalLine);
+                        }
+                    }
+                }
+
+                // ============================================
+                // ANIMATION
+                // ============================================
+
+                var startTime = Date.now();
+                var ACT_DURATION = 7000;
+                var TOTAL_ACTS = 6;
+
+                var labels = [
+                    'MASSIV DANNYKH',
+                    'NORMALIZATSIYA I STRUKTURIZATSIYA',
+                    'POSTROENIE GRAFA ZNANIY',
+                    'KOGNITIVNOE YADRO',
+                    'MULTIAGENTNAYA ARKHITEKTURA',
+                    'STRATEGICHESKOE UPRAVLENIE'
+                ];
+
+                function animate() {
+                    requestAnimationFrame(animate);
+
+                    var elapsed = Date.now() - startTime;
+                    var cycleTime = elapsed % (ACT_DURATION * TOTAL_ACTS);
+                    var act = Math.floor(cycleTime / ACT_DURATION);
+                    var actProgress = (cycleTime % ACT_DURATION) / ACT_DURATION;
+                    var smoothProgress = easeInOutCubic(actProgress);
+                    var time = elapsed * 0.001;
+
+                    // ============================================
+                    // CAMERA - SMOOTH TRANSITIONS
+                    // ============================================
+
+                    var targetCamX, targetCamY, targetCamZ;
+                    var lookAtY = 0;
+
+                    if (act === 0) {
+                        // Fractals rising - side view
+                        targetCamX = Math.sin(time * 0.08) * 4;
+                        targetCamY = -15 + smoothProgress * 25;
+                        targetCamZ = 45;
+                        lookAtY = targetCamY * 0.4;
+                    } else if (act === 1) {
+                        // Synthesis - focus on sphere forming from diagonal angle
+                        targetCamX = 15 + Math.sin(time * 0.08) * 3;
+                        targetCamY = 18 + smoothProgress * 8;
+                        targetCamZ = 35 - smoothProgress * 8;
+                        lookAtY = 14;
+                    } else if (act === 2) {
+                        // Graph - transition to top view
+                        var transP = smoothProgress;
+                        targetCamX = Math.sin(time * 0.05) * 3;
+                        targetCamY = 18 + transP * 50;
+                        targetCamZ = 40 * (1 - transP);
+                        lookAtY = 0;
+                    } else if (act === 3) {
+                        // Embodiment - close view of agent forming
+                        targetCamX = Math.sin(time * 0.1) * 8;
+                        targetCamY = 15 + Math.cos(time * 0.08) * 5;
+                        targetCamZ = 25;
+                        lookAtY = 0;
+                    } else if (act === 4) {
+                        // Cluster - zoom out to see pentagon
+                        targetCamX = Math.sin(time * 0.06) * 10;
+                        targetCamY = 40 + smoothProgress * 20;
+                        targetCamZ = 50 + smoothProgress * 20;
+                        lookAtY = 0;
+                    } else if (act === 5) {
+                        // Hive Mind - far zoom out, galaxy view
+                        targetCamX = Math.sin(time * 0.03) * 50;
+                        targetCamY = 150 + smoothProgress * 200;
+                        targetCamZ = 200 + smoothProgress * 300;
+                        lookAtY = 0;
+                    }
+
+                    // Smooth camera movement
+                    camera.position.x += (targetCamX - camera.position.x) * 0.03;
+                    camera.position.y += (targetCamY - camera.position.y) * 0.03;
+                    camera.position.z += (targetCamZ - camera.position.z) * 0.03;
+                    camera.lookAt(0, lookAtY, 0);
+
+                    // ============================================
+                    // ACT 0-1: FRACTALS & RINGS
+                    // ============================================
+
+                    var totalProgress01 = act < 2 ? act + actProgress : 2;
+
+                    // Rings
+                    for (var ri = 0; ri < rings.length; ri++) {
+                        var ringShow = act === 0 || act === 1;
+                        var ringTarget = ringShow ? 0.7 : 0;
+                        rings[ri].material.opacity += (ringTarget - rings[ri].material.opacity) * 0.05;
+                        rings[ri].rotation.z = time * (0.15 + ri * 0.08) * (ri % 2 === 0 ? 1 : -1);
+                    }
+
+                    // Fractals - they rise through rings and merge into cylinder
+                    for (var fi = 0; fi < fractals.length; fi++) {
+                        var f = fractals[fi];
+                        var fd = f.userData;
+
+                        if (act === 0) {
+                            // Act 0: Rise through the rings, staying inside
+                            var riseProgress = easeOutQuart(Math.min(1, actProgress));
+                            var targetY = fd.startPos.y + riseProgress * 45;
+                            f.position.y += (targetY - f.position.y) * 0.05;
+
+                            // Keep fractals inside rings with slight movement
+                            var targetX = Math.cos(fd.angle + time * fd.speed * 0.3) * fd.radius;
+                            var targetZ = Math.sin(fd.angle + time * fd.speed * 0.3) * fd.radius;
+                            f.position.x += (targetX - f.position.x) * 0.04;
+                            f.position.z += (targetZ - f.position.z) * 0.04;
+
+                            f.rotation.x += fd.rotSpeed;
+                            f.rotation.y += fd.rotSpeed * 0.7;
+                            f.material.opacity = 0.85;
+                            f.scale.setScalar(1); // Normal size in act 0
+                            // Keep original gray color
+                            f.material.color.setHSL(0, 0, 0.2);
+                        } else if (act === 1) {
+                            // Act 1: Fractals converge and merge into sphere shape
+                            var mergeProgress = easeInOutCubic(actProgress);
+
+                            // Move towards target position on sphere surface
+                            var targetX = fd.targetX;
+                            var targetY = fd.targetY;
+                            var targetZ = fd.targetZ;
+
+                            f.position.x += (targetX - f.position.x) * 0.03 * (1 + mergeProgress);
+                            f.position.y += (targetY - f.position.y) * 0.03 * (1 + mergeProgress);
+                            f.position.z += (targetZ - f.position.z) * 0.03 * (1 + mergeProgress);
+
+                            // Slow down rotation as they merge
+                            f.rotation.x += fd.rotSpeed * (1 - mergeProgress * 0.9);
+                            f.rotation.y += fd.rotSpeed * 0.7 * (1 - mergeProgress * 0.9);
+
+                            // Fractals shrink to form dense sphere
+                            var scaleTarget = 1 - mergeProgress * 0.4; // Shrink to 60%
+                            f.scale.setScalar(lerp(f.scale.x, scaleTarget, 0.05));
+
+                            // Fractals darken to black as they merge into sphere
+                            var darkenProgress = Math.min(1, mergeProgress * 1.2);
+                            var startBrightness = 0.2; // Original gray
+                            var endBrightness = 0.05; // Almost black
+                            var brightness = lerp(startBrightness, endBrightness, darkenProgress);
+                            f.material.color.setHSL(0, 0, brightness);
+
+                            // Fractals form the sphere - they stay fully visible!
+                            // No fading at all - they ARE the sphere
+                            f.material.opacity = 0.9;
+                        } else if (act === 2) {
+                            // Act 2: Fractals fade out as graph appears
+                            var fadeOut = Math.min(1, smoothProgress * 2); // Fade in first half
+                            f.material.opacity = 0.9 * (1 - fadeOut);
+                            // Keep their sphere position and dark color while fading
+                            f.material.color.setHSL(0, 0, 0.05);
+                        } else {
+                            f.material.opacity += (0 - f.material.opacity) * 0.1;
+                            f.scale.setScalar(1); // Reset scale
+                            // Reset color to original gray
+                            f.material.color.setHSL(0, 0, 0.2);
+                        }
+                    }
+
+                    // Update chemical bonds between fractals
+                    for (var bondIdx = 0; bondIdx < fractalBonds.length; bondIdx++) {
+                        var bondData = fractalBonds[bondIdx].userData;
+                        var fromFractal = fractals[bondData.from];
+                        var toFractal = fractals[bondData.to];
+
+                        // Update bond positions
+                        var bondPositions = fractalBonds[bondIdx].geometry.attributes.position.array;
+                        bondPositions[0] = fromFractal.position.x;
+                        bondPositions[1] = fromFractal.position.y;
+                        bondPositions[2] = fromFractal.position.z;
+                        bondPositions[3] = toFractal.position.x;
+                        bondPositions[4] = toFractal.position.y;
+                        bondPositions[5] = toFractal.position.z;
+                        fractalBonds[bondIdx].geometry.attributes.position.needsUpdate = true;
+
+                        // Bonds appear during act 1 (merging phase)
+                        if (act === 1) {
+                            var bondProgress = Math.min(1, actProgress * 2);
+                            var bondFade = actProgress > 0.7 ? (1 - (actProgress - 0.7) / 0.3) : 1;
+                            fractalBonds[bondIdx].material.opacity = bondProgress * 0.4 * bondFade;
+                        } else {
+                            fractalBonds[bondIdx].material.opacity += (0 - fractalBonds[bondIdx].material.opacity) * 0.1;
+                        }
+                    }
+
+                    // Sphere - HIDDEN, only fractals form the visible sphere
+                    if (act === 1) {
+                        // Sphere is invisible - fractals ARE the sphere
+                        sphere.material.opacity = 0;
+                        sphere.scale.setScalar(0.01);
+                        sphere.rotation.y = time * 0.05;
+                    } else if (act === 2) {
+                        // Sphere remains hidden in act 2 as well
+                        sphere.material.opacity = 0;
+                        sphere.scale.setScalar(0.01);
+                        sphere.rotation.y = time * 0.06;
+
+                        // centralNode appears from the start of act 2
+                        var centralNodeProgress = easeInOutCubic(smoothProgress);
+                        centralNode.material.opacity += (centralNodeProgress - centralNode.material.opacity) * 0.04;
+                        centralNode.scale.setScalar(lerp(centralNode.scale.x, centralNodeProgress, 0.04));
+                    } else if (act >= 3) {
+                        // Fully hide sphere after act 2
+                        sphere.material.opacity += (0 - sphere.material.opacity) * 0.15;
+                        sphere.scale.setScalar(lerp(sphere.scale.x, 0.01, 0.1));
+                    } else {
+                        sphere.material.opacity = 0;
+                        sphere.scale.setScalar(0.01);
+                    }
+
+                    // ============================================
+                    // ACT 2: GRAPH NETWORK
+                    // ============================================
+
+                    if (act === 2) {
+                        // Nodes appear FASTER - reduced delays
+                        for (var gni = 1; gni < graphNodes.length; gni++) {
+                            var nodeDelay = gni * 0.012; // Faster appearance
+                            var nodeP = Math.max(0, smoothProgress - nodeDelay);
+                            var nodeTarget = Math.min(1, nodeP * 3); // Faster fade in
+                            graphNodes[gni].material.opacity += (nodeTarget - graphNodes[gni].material.opacity) * 0.08;
+                            graphNodes[gni].scale.setScalar(lerp(graphNodes[gni].scale.x, nodeTarget, 0.08));
+
+                            var gnBase = graphNodes[gni].userData.basePos;
+                            graphNodes[gni].position.y = gnBase.y + Math.sin(time * 1.5 + graphNodes[gni].userData.phase) * 0.2;
+                        }
+
+                        // Edges appear FASTER
+                        for (var gei = 0; gei < graphEdges.length; gei++) {
+                            var edgeDelay = 0.1 + gei * 0.008; // Faster
+                            var edgeP = Math.max(0, smoothProgress - edgeDelay);
+                            var edgeTarget = Math.min(0.6, edgeP * 2);
+                            graphEdges[gei].material.opacity += (edgeTarget - graphEdges[gei].material.opacity) * 0.08;
+
+                            // Update positions
+                            var fromN = graphNodes[graphEdges[gei].userData.from];
+                            var toN = graphNodes[graphEdges[gei].userData.to];
+                            var ePos = graphEdges[gei].geometry.attributes.position.array;
+                            ePos[0] = fromN.position.x; ePos[1] = fromN.position.y; ePos[2] = fromN.position.z;
+                            ePos[3] = toN.position.x; ePos[4] = toN.position.y; ePos[5] = toN.position.z;
+                            graphEdges[gei].geometry.attributes.position.needsUpdate = true;
+                        }
+
+                        centralNode.material.opacity += (1 - centralNode.material.opacity) * 0.06;
+
+                        // Start contracting graph at the end of act 2 for seamless transition
+                        if (smoothProgress > 0.7) {
+                            var contractProgress = (smoothProgress - 0.7) / 0.3;
+                            for (var gnc = 1; gnc < graphNodes.length; gnc++) {
+                                var gnBase2 = graphNodes[gnc].userData.basePos;
+                                var contractFactor = 1 - contractProgress * 0.5;
+                                graphNodes[gnc].position.x = gnBase2.x * contractFactor;
+                                graphNodes[gnc].position.z = gnBase2.z * contractFactor;
+                            }
+                        }
+                    } else if (act === 3) {
+                        // Graph contracts quickly into the agent shell
+                        for (var gnf = 0; gnf < graphNodes.length; gnf++) {
+                            graphNodes[gnf].material.opacity += (0 - graphNodes[gnf].material.opacity) * 0.1;
+                            graphNodes[gnf].scale.setScalar(lerp(graphNodes[gnf].scale.x, 0.01, 0.08));
+                            // Contract to center
+                            graphNodes[gnf].position.x *= (1 - 0.08);
+                            graphNodes[gnf].position.z *= (1 - 0.08);
+                        }
+                        for (var gef = 0; gef < graphEdges.length; gef++) {
+                            graphEdges[gef].material.opacity += (0 - graphEdges[gef].material.opacity) * 0.1;
+                        }
+                        // Also hide central node
+                        centralNode.material.opacity += (0 - centralNode.material.opacity) * 0.08;
+                    } else if (act > 3) {
+                        // Ensure graph is fully hidden in later acts
+                        for (var gna = 0; gna < graphNodes.length; gna++) {
+                            graphNodes[gna].material.opacity = 0;
+                            graphNodes[gna].scale.setScalar(0.01);
+                        }
+                        for (var gea = 0; gea < graphEdges.length; gea++) {
+                            graphEdges[gea].material.opacity = 0;
+                        }
+                        centralNode.material.opacity = 0;
+                    } else if (act < 2) {
+                        for (var gnh = 0; gnh < graphNodes.length; gnh++) {
+                            graphNodes[gnh].material.opacity = 0;
+                            graphNodes[gnh].scale.setScalar(0.01);
+                        }
+                        for (var geh = 0; geh < graphEdges.length; geh++) {
+                            graphEdges[geh].material.opacity = 0;
+                        }
+                    }
+
+                    // ============================================
+                    // ACT 3: EMBODIMENT
+                    // ============================================
+
+                    if (act === 3) {
+                        // Inner graph sphere pulses
+                        var graphSphereTarget = 0.8;
+                        graphSphere.material.opacity += (graphSphereTarget - graphSphere.material.opacity) * 0.04;
+                        graphSphere.scale.setScalar(1 + Math.sin(time * 3) * 0.1);
+                        graphSphere.rotation.x = time * 0.3;
+                        graphSphere.rotation.y = time * 0.2;
+
+                        // Shell appears
+                        var shellDelay = 0.3;
+                        var shellP = Math.max(0, smoothProgress - shellDelay);
+                        shell.material.opacity += (Math.min(0.7, shellP * 2) - shell.material.opacity) * 0.04;
+                        shell.rotation.x = time * 0.15;
+                        shell.rotation.y = time * 0.1;
+
+                        // Glass outer layer
+                        var glassDelay = 0.5;
+                        var glassP = Math.max(0, smoothProgress - glassDelay);
+                        glass.material.opacity += (Math.min(0.3, glassP) - glass.material.opacity) * 0.04;
+                        glass.rotation.x = -time * 0.08;
+                        glass.rotation.y = time * 0.12;
+                    } else if (act === 4) {
+                        // Keep agent visible but shrink
+                        graphSphere.material.opacity += (0.5 - graphSphere.material.opacity) * 0.03;
+                        shell.material.opacity += (0.5 - shell.material.opacity) * 0.03;
+                        glass.material.opacity += (0.2 - glass.material.opacity) * 0.03;
+
+                        var shrinkScale = lerp(1, 0.4, smoothProgress);
+                        graphSphere.scale.setScalar(shrinkScale);
+                        shell.scale.setScalar(shrinkScale);
+                        glass.scale.setScalar(shrinkScale);
+                    } else if (act > 4) {
+                        // Fully hide embodiment elements after act 4
+                        graphSphere.material.opacity = 0;
+                        shell.material.opacity = 0;
+                        glass.material.opacity = 0;
+                        graphSphere.scale.setScalar(0.01);
+                        shell.scale.setScalar(0.01);
+                        glass.scale.setScalar(0.01);
+                    } else {
+                        // Before act 3
+                        graphSphere.material.opacity += (0 - graphSphere.material.opacity) * 0.08;
+                        shell.material.opacity += (0 - shell.material.opacity) * 0.08;
+                        glass.material.opacity += (0 - glass.material.opacity) * 0.08;
+                        graphSphere.scale.setScalar(0.01);
+                        shell.scale.setScalar(0.01);
+                        glass.scale.setScalar(0.01);
+                    }
+
+                    // ============================================
+                    // ACT 4: SUPERVISOR CLUSTER
+                    // ============================================
+
+                    if (act === 4) {
+                        // Supervisor is hidden - only pentagon of agents
+                        supervisor.material.opacity = 0;
+                        supervisor.scale.setScalar(0.01);
+
+                        // Agents appear in pentagon
+                        for (var cai = 0; cai < clusterAgents.length; cai++) {
+                            var agentDelay = 0.2 + cai * 0.1;
+                            var agentP = Math.max(0, smoothProgress - agentDelay);
+                            var agentTarget = Math.min(0.85, agentP * 2);
+                            clusterAgents[cai].material.opacity += (agentTarget - clusterAgents[cai].material.opacity) * 0.04;
+                            clusterAgents[cai].scale.setScalar(lerp(clusterAgents[cai].scale.x, Math.min(1, agentP * 2), 0.04));
+                            clusterAgents[cai].rotation.y = time * 0.15 + cai;
+
+                            // Inner graph
+                            clusterAgents[cai].userData.innerGraph.material.opacity += (agentTarget * 0.6 - clusterAgents[cai].userData.innerGraph.material.opacity) * 0.04;
+                            clusterAgents[cai].userData.innerGraph.rotation.x = time * 0.4;
+                            clusterAgents[cai].userData.innerGraph.rotation.y = time * 0.3;
+                        }
+
+                        // Beams pulse
+                        for (var sbi = 0; sbi < supervisorBeams.length; sbi++) {
+                            var beamDelay = 0.4 + sbi * 0.08;
+                            var beamP = Math.max(0, smoothProgress - beamDelay);
+                            var pulse = 0.3 + Math.sin(time * 4 + sbi * 1.2) * 0.2;
+                            supervisorBeams[sbi].material.opacity += (beamP * pulse - supervisorBeams[sbi].material.opacity) * 0.05;
+                        }
+
+                        // Position agent labels next to their 3D nodes
+                        for (var ali = 0; ali < agentLabelElements.length; ali++) {
+                            var agentPos = clusterAgents[ali].position.clone();
+                            agentPos.project(camera);
+                            var x = (agentPos.x * 0.5 + 0.5) * window.innerWidth;
+                            var y = (-agentPos.y * 0.5 + 0.5) * window.innerHeight;
+                            agentLabelElements[ali].style.left = (x + 35) + 'px';
+                            agentLabelElements[ali].style.top = (y - 10) + 'px';
+                            agentLabelElements[ali].style.opacity = smoothProgress > 0.5 ? '1' : '0';
+                        }
+                    } else if (act === 5) {
+                        // Keep cluster visible but smaller - supervisor hidden
+                        supervisor.material.opacity = 0;
+                        supervisor.scale.setScalar(0.01);
+
+                        for (var caf = 0; caf < clusterAgents.length; caf++) {
+                            clusterAgents[caf].material.opacity += (0.4 - clusterAgents[caf].material.opacity) * 0.03;
+                            clusterAgents[caf].scale.setScalar(lerp(clusterAgents[caf].scale.x, 0.3, 0.02));
+                        }
+                        for (var sbf = 0; sbf < supervisorBeams.length; sbf++) {
+                            supervisorBeams[sbf].material.opacity += (0.15 - supervisorBeams[sbf].material.opacity) * 0.03;
+                        }
+
+                        // Hide agent labels
+                        for (var alf = 0; alf < agentLabelElements.length; alf++) {
+                            agentLabelElements[alf].style.opacity = '0';
+                        }
+                    } else {
+                        supervisor.material.opacity += (0 - supervisor.material.opacity) * 0.05;
+                        supervisor.scale.setScalar(0.01);
+                        for (var cah = 0; cah < clusterAgents.length; cah++) {
+                            clusterAgents[cah].material.opacity = 0;
+                            clusterAgents[cah].scale.setScalar(0.01);
+                        }
+                        for (var sbh = 0; sbh < supervisorBeams.length; sbh++) {
+                            supervisorBeams[sbh].material.opacity = 0;
+                        }
+                        // Hide agent labels
+                        for (var alh = 0; alh < agentLabelElements.length; alh++) {
+                            agentLabelElements[alh].style.opacity = '0';
+                        }
+                    }
+
+                    // ============================================
+                    // ACT 5: HIVE MIND
+                    // ============================================
+
+                    if (act === 5) {
+                        // Clusters appear
+                        for (var hci = 0; hci < clusters.length; hci++) {
+                            var clusterDelay = hci * 0.015;
+                            var clusterP = Math.max(0, smoothProgress - clusterDelay);
+                            var clusterTarget = Math.min(0.8, clusterP * 2);
+
+                            clusters[hci].children.forEach(function(child) {
+                                if (child.material) {
+                                    child.material.opacity += (clusterTarget - child.material.opacity) * 0.04;
+                                }
+                            });
+
+                            // Slow rotation
+                            var cd = clusters[hci].userData;
+                            clusters[hci].rotation.y = time * cd.rotSpeed * 10;
+                        }
+
+                        // Global lines appear
+                        for (var gli = 0; gli < globalLines.length; gli++) {
+                            var lineDelay = 0.3 + gli * 0.01;
+                            var lineP = Math.max(0, smoothProgress - lineDelay);
+                            globalLines[gli].material.opacity += (Math.min(0.3, lineP) - globalLines[gli].material.opacity) * 0.04;
+                        }
+
+                        // Final text
+                        document.getElementById('finalText').style.opacity = smoothProgress > 0.6 ? '1' : '0';
+                    } else {
+                        for (var hch = 0; hch < clusters.length; hch++) {
+                            clusters[hch].children.forEach(function(child) {
+                                if (child.material) {
+                                    child.material.opacity += (0 - child.material.opacity) * 0.05;
+                                }
+                            });
+                        }
+                        for (var glh = 0; glh < globalLines.length; glh++) {
+                            globalLines[glh].material.opacity = 0;
+                        }
+                        document.getElementById('finalText').style.opacity = '0';
+                    }
+
+                    // ============================================
+                    // UI UPDATES
+                    // ============================================
+
+                    var items = document.querySelectorAll('.timeline-item');
+                    for (var ui = 0; ui < items.length; ui++) {
+                        items[ui].classList.remove('active', 'completed');
+                        if (ui < act) items[ui].classList.add('completed');
+                        else if (ui === act) items[ui].classList.add('active');
+                    }
+
+                    var ct = document.getElementById('centerText');
+                    ct.style.opacity = (act === 0 && actProgress < 0.25) ? '1' : '0';
+
+                    var labelSpan = document.querySelector('#labelsData span[data-index="' + act + '"]');
+                    document.getElementById('stageLabel').textContent = labelSpan ? labelSpan.textContent : '';
+
+                    info.textContent = 'Act: ' + (act + 1) + '/' + TOTAL_ACTS + ' | ' + Math.round(actProgress * 100) + '%';
+
+                    renderer.render(scene, camera);
+                }
+
+                window.addEventListener('resize', function() {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+
+                animate();
+
+            } catch (e) {
+                info.textContent = 'ERROR: ' + e.message;
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+</html>
